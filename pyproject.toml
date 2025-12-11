@@ -1,0 +1,31 @@
+# PyProject configuration for PyCharm and modern Python tooling
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ieee-fraud-detection"
+version = "1.0.0"
+description = "IEEE Fraud Detection - Data Science Bootcamp Final Project"
+readme = "README.md"
+requires-python = ">=3.8,<3.13"
+license = {text = "MIT"}
+
+[tool.setuptools]
+packages = ["src"]
+
+[tool.setuptools.package-data]
+"*" = ["*.txt", "*.md"]
+
+# PyCharm / IDE configuration
+[tool.pycharm]
+project_root = "."
+
+[tool.black]
+line-length = 100
+target-version = ['py38', 'py39', 'py310', 'py311']
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
