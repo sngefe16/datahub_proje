@@ -1,0 +1,27 @@
+# Docker Compose configuration for IEEE Fraud Detection Project
+# Note: This is for production deployment, not for development
+version: '3.8'
+
+services:
+  fraud-detection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: fraud-detection:latest
+    container_name: fraud-detection-app
+    volumes:
+      - ./data:/app/data:ro  # Read-only data mount
+      - ./models:/app/models  # Models directory
+      - ./results:/app/results  # Results directory
+      - ./reports:/app/reports  # Reports directory
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+    # Uncomment and modify the command below for your specific use case
+    # command: python src/train.py
+    restart: unless-stopped
+
+
+
+
+
