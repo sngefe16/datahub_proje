@@ -1,8 +1,4 @@
-"""
-Evaluation utilities for seventh view model.
-Extends sixth view with improved threshold optimization for better recall.
-Based on sixth view improvements from MODEL_COMPARISON2.md.
-"""
+"""Evaluation utilities: improved threshold optimization."""
 
 import numpy as np
 import pandas as pd

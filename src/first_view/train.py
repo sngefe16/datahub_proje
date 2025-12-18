@@ -1,11 +1,4 @@
-"""
-Training script for first view model.
-"""
-
-"""
-Training script for first view model.
-Optimized for PyCharm execution (both script and console).
-"""
+"""First view training pipeline."""
 
 import pandas as pd
 import numpy as np

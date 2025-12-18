@@ -1,7 +1,4 @@
-"""
-Feature selection utilities for fourth view model.
-Removes unnecessary features to improve model performance and reduce overfitting.
-"""
+"""Feature selection: removes low variance, high correlation, selects by importance."""
 
 import pandas as pd
 import numpy as np
@@ -19,15 +16,12 @@ def remove_low_variance_features(X: pd.DataFrame,
                                  threshold: float = 0.01,
                                  verbose: bool = True) -> tuple:
     """
-    Remove features with low variance.
+    Removes features with low variance.
     
-    Parameters
-    ----------
-    X : pd.DataFrame
-        Feature dataframe
-    threshold : float
-        Variance threshold (features with variance < threshold will be removed)
-    verbose : bool
+    Args:
+        X: Feature dataframe.
+        threshold: Variance threshold.
+        verbose:
         Whether to print information
         
     Returns

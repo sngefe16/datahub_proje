@@ -1,9 +1,4 @@
-"""
-Machine learning models for fifth view fraud detection.
-Targets AUC-ROC > 0.95 and Recall > 0.9.
-Uses enhanced LightGBM with higher capacity, Optuna/Hyperopt hyperparameter tuning,
-ensemble methods (LightGBM + XGBoost + CatBoost), and stacking.
-"""
+"""LightGBM models: higher capacity, ensemble (LightGBM+XGBoost+CatBoost), stacking."""
 
 import numpy as np
 import pandas as pd

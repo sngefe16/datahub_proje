@@ -1,7 +1,6 @@
 """
-Data loader for seventh view model.
-Includes all card features (card1-card6), IP/dist features, and enhanced feature selection.
-Based on sixth view with improvements from MODEL_COMPARISON2.md.
+Data loader with dual-mode support (debug/full).
+Loads transaction + identity data with all card features (card1-card6), IP/dist features.
 """
 
 import pandas as pd
@@ -27,40 +26,32 @@ except (ImportError, ValueError):
 
 
 def load_sixth_view_data(data_dir: Optional[str] = None, 
-                         sample_size: Optional[int] = None) -> Tuple[pd.DataFrame, pd.DataFrame]:
+                         use_full_data: bool = False,
+                         debug_sample_size: int = 20000,
+                         debug_fraud_rate: float = 0.035,
+                         random_state: int = 42) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Load training and test data for sixth view with ALL card features and IP/dist features.
+    Loads transaction + identity data.
     
-    Selected features:
-    Transaction data:
-    - card1-card6: All card identifiers (NEW!)
-    - addr1-addr2: Address identifiers (NEW: addr2!)
-    - TransactionAmt: Transaction amount
-    - TransactionDT: Transaction datetime (seconds)
-    - ProductCD: Product code
-    - P_emaildomain: Purchaser email domain
-    - R_emaildomain: Recipient email domain
-    - dist1, dist2: IP distance features (NEW!)
-    - C1-C14: Card-related features (NEW!)
+    Dual-mode:
+    - DEBUG (use_full_data=False): Samples 20k rows, preserves fraud rate.
+    - FULL (use_full_data=True): Uses all 590k rows.
     
-    Identity data:
-    - DeviceType: Device type (mobile/desktop)
-    - DeviceInfo: Device information
-    - id_28-id_31: Identity features
+    Features: card1-card6, addr1-addr2, TransactionAmt, TransactionDT, ProductCD,
+    P_emaildomain, R_emaildomain, dist1/dist2, C1-C14, DeviceType, DeviceInfo, id_28-id_31.
     
-    Parameters
-    ----------
-    data_dir : str, optional
-        Directory containing the data files
-    sample_size : int, optional
-        If provided, sample this many rows for faster development
-        
-    Returns
-    -------
-    train_df : pd.DataFrame
-        Training data with selected features and target
-    test_df : pd.DataFrame
-        Test data with selected features
+    Args:
+        data_dir: Data directory path.
+        use_full_data: True for full dataset, False for debug sample.
+        debug_sample_size: Sample size for debug mode.
+        debug_fraud_rate: Target fraud rate for debug mode.
+        random_state: Random seed.
+    
+    Returns:
+        (train_df, test_df) with isFraud target in train_df.
+    
+    Raises:
+        ValueError: If fraud rate deviates > 0.2% from target.
     """
     # Use default data directory if not specified
     if data_dir is None:
@@ -146,20 +137,231 @@ def load_sixth_view_data(data_dir: Optional[str] = None,
     train_df = train_trans_selected.merge(train_id_selected, on='TransactionID', how='left')
     test_df = test_trans_selected.merge(test_id_selected, on='TransactionID', how='left')
     
-    if sample_size:
-        print(f"Sampling {sample_size} rows for faster development...")
-        train_df = train_df.sample(n=min(sample_size, len(train_df)), 
-                                  random_state=42)
+    # ============================================================
+    # DUAL-MODE PIPELINE: DEBUG vs FULL DATA
+    # ============================================================
+    # Why debug mode exists:
+    # - Faster iteration during feature engineering and model development
+    # - Reduces risk of bugs in production pipeline
+    # - Allows testing on representative subset before full training
+    # Why class ratio preservation matters:
+    # - Maintains realistic fraud detection scenario
+    # - Ensures validation metrics are meaningful
+    # - Prevents overfitting to wrong class distribution
     
-    print(f"Training data shape: {train_df.shape}")
-    print(f"Test data shape: {test_df.shape}")
+    original_train_size = len(train_df)
+    original_fraud_rate = train_df['isFraud'].mean()
+    
+    if use_full_data:
+        # FULL MODE: Use entire dataset
+        print("\n" + "=" * 70)
+        print("🔴 FULL DATA MODE")
+        print("=" * 70)
+        print(f"Using entire dataset: {original_train_size:,} rows")
+        print(f"Original fraud rate: {original_fraud_rate:.4f} ({original_fraud_rate*100:.2f}%)")
+        print("=" * 70)
+        
+        # Safety check: Verify fraud rate is reasonable
+        expected_fraud_rate = 0.035  # ~3.5%
+        fraud_rate_diff = abs(original_fraud_rate - expected_fraud_rate)
+        if fraud_rate_diff > 0.002:  # 0.2% tolerance
+            print(f"⚠️  WARNING: Fraud rate deviates from expected {expected_fraud_rate*100:.2f}%")
+            print(f"   Actual: {original_fraud_rate*100:.4f}%, Difference: {fraud_rate_diff*100:.4f}%")
+        else:
+            print(f"✅ Fraud rate within tolerance: {fraud_rate_diff*100:.4f}% deviation")
+        
+        # No sampling - use full data
+        train_df_sampled = train_df.copy()
+        test_df_sampled = test_df.copy()
+        
+    else:
+        # DEBUG MODE: Stratified sampling with preserved class ratio
+        print("\n" + "=" * 70)
+        print("🟢 DEBUG MODE")
+        print("=" * 70)
+        print(f"Sampling {debug_sample_size:,} rows with {debug_fraud_rate*100:.2f}% fraud rate...")
+        print(f"Original dataset: {original_train_size:,} rows ({original_fraud_rate*100:.2f}% fraud)")
+        print("=" * 70)
+        
+        # Use centralized stratified sampling
+        train_df_sampled = sample_balanced_data(
+            train_df, 
+            target_size=debug_sample_size,
+            fraud_rate=debug_fraud_rate,
+            random_state=random_state,
+            tolerance=0.002  # 0.2% tolerance for safety check
+        )
+        
+        # Sample test data proportionally (test set has no isFraud, so just take first N rows)
+        # This is safe because test data order doesn't affect training
+        test_sample_size = min(debug_sample_size, len(test_df))
+        test_df_sampled = test_df.head(test_sample_size).copy()
+        print(f"\nTest data sampled: {test_sample_size:,} rows (for faster development)")
+        
+        # Safety check: Verify sampled fraud rate
+        sampled_fraud_rate = train_df_sampled['isFraud'].mean()
+        fraud_rate_diff = abs(sampled_fraud_rate - debug_fraud_rate)
+        if fraud_rate_diff > 0.002:  # 0.2% tolerance
+            raise ValueError(
+                f"Sampled fraud rate deviates too much from target: "
+                f"expected {debug_fraud_rate*100:.4f}%, got {sampled_fraud_rate*100:.4f}%, "
+                f"difference: {fraud_rate_diff*100:.4f}% (tolerance: 0.2%)"
+            )
+        else:
+            print(f"✅ Sampled fraud rate verified: {sampled_fraud_rate*100:.4f}% "
+                  f"(target: {debug_fraud_rate*100:.4f}%, diff: {fraud_rate_diff*100:.4f}%)")
+    
+    # Final logging
+    print(f"\n" + "=" * 70)
+    print("DATA LOADING SUMMARY")
+    print("=" * 70)
+    print(f"Mode: {'FULL DATA' if use_full_data else 'DEBUG'}")
+    print(f"Training data: {len(train_df_sampled):,} rows")
+    print(f"Test data: {len(test_df_sampled):,} rows")
+    print(f"Fraud rate: {train_df_sampled['isFraud'].mean():.4f} ({train_df_sampled['isFraud'].mean()*100:.2f}%)")
     
     all_features = [f for f in available_trans_features + available_id_features 
                     if f not in ['TransactionID', 'isFraud']]
-    print(f"Selected features ({len(all_features)}): {all_features[:20]}..." if len(all_features) > 20 else f"Selected features: {all_features}")
-    print(f"Fraud rate: {train_df['isFraud'].mean():.4f}")
+    print(f"Features: {len(all_features)}")
+    print("=" * 70)
     
-    return train_df, test_df
+    return train_df_sampled, test_df_sampled
+
+
+def sample_balanced_data(train_df: pd.DataFrame, 
+                        target_size: int = 10000,
+                        fraud_rate: float = 0.035,
+                        random_state: int = 42,
+                        tolerance: float = 0.0001) -> pd.DataFrame:
+    """
+    Sample a balanced dataset with specified fraud rate.
+    Ensures the actual fraud rate matches the target fraud rate exactly.
+    
+    Parameters
+    ----------
+    train_df : pd.DataFrame
+        Full training dataframe with 'isFraud' column
+    target_size : int
+        Target total number of rows (default: 10000)
+    fraud_rate : float
+        Target fraud rate (default: 0.035 = 3.5%)
+    random_state : int
+        Random seed for reproducibility
+    tolerance : float
+        Maximum allowed difference between target and actual fraud rate (default: 0.0001 = 0.01%)
+        
+    Returns
+    -------
+    sampled_df : pd.DataFrame
+        Sampled dataframe with exactly target_size rows and fraud_rate fraud percentage
+        
+    Raises
+    ------
+    ValueError
+        If there are not enough fraud or normal transactions, or if actual fraud rate
+        differs from target by more than tolerance
+    """
+    if 'isFraud' not in train_df.columns:
+        raise ValueError("DataFrame must contain 'isFraud' column")
+    
+    if not (0 < fraud_rate < 1):
+        raise ValueError(f"fraud_rate must be between 0 and 1, got {fraud_rate}")
+    
+    # Separate fraud and normal transactions
+    fraud_df = train_df[train_df['isFraud'] == 1].copy()
+    normal_df = train_df[train_df['isFraud'] == 0].copy()
+    
+    print(f"Original data: {len(train_df):,} rows")
+    print(f"  Fraud: {len(fraud_df):,} ({len(fraud_df)/len(train_df)*100:.2f}%)")
+    print(f"  Normal: {len(normal_df):,} ({len(normal_df)/len(train_df)*100:.2f}%)")
+    
+    # Calculate target fraud and normal counts with proper rounding
+    # Use round() to ensure we get the closest integer to the target
+    n_fraud_target = round(target_size * fraud_rate)
+    n_normal_target = target_size - n_fraud_target
+    
+    # Verify the calculation is correct
+    calculated_fraud_rate = n_fraud_target / target_size
+    if abs(calculated_fraud_rate - fraud_rate) > tolerance:
+        # If rounding causes too much deviation, adjust
+        # Try rounding up or down to see which is closer
+        n_fraud_floor = int(target_size * fraud_rate)
+        n_fraud_ceil = n_fraud_floor + 1
+        
+        rate_floor = n_fraud_floor / target_size
+        rate_ceil = n_fraud_ceil / target_size
+        
+        if abs(rate_floor - fraud_rate) < abs(rate_ceil - fraud_rate):
+            n_fraud_target = n_fraud_floor
+        else:
+            n_fraud_target = n_fraud_ceil
+        
+        n_normal_target = target_size - n_fraud_target
+        calculated_fraud_rate = n_fraud_target / target_size
+    
+    print(f"\nTarget sampling:")
+    print(f"  Target total: {target_size:,} rows")
+    print(f"  Target fraud: {n_fraud_target:,} ({calculated_fraud_rate*100:.4f}%)")
+    print(f"  Target normal: {n_normal_target:,} ({(1-calculated_fraud_rate)*100:.4f}%)")
+    
+    # Check if we have enough fraud transactions
+    if len(fraud_df) < n_fraud_target:
+        raise ValueError(
+            f"Insufficient fraud transactions: need {n_fraud_target:,}, "
+            f"but only {len(fraud_df):,} available"
+        )
+    
+    # Check if we have enough normal transactions
+    if len(normal_df) < n_normal_target:
+        raise ValueError(
+            f"Insufficient normal transactions: need {n_normal_target:,}, "
+            f"but only {len(normal_df):,} available"
+        )
+    
+    # Sample fraud transactions
+    fraud_sampled = fraud_df.sample(n=n_fraud_target, random_state=random_state).copy()
+    
+    # Sample normal transactions
+    normal_sampled = normal_df.sample(n=n_normal_target, random_state=random_state).copy()
+    
+    # Combine and shuffle
+    sampled_df = pd.concat([fraud_sampled, normal_sampled], ignore_index=True)
+    sampled_df = sampled_df.sample(frac=1, random_state=random_state).reset_index(drop=True)
+    
+    # Verify the final result
+    actual_fraud_count = int(sampled_df['isFraud'].sum())
+    actual_normal_count = int((sampled_df['isFraud'] == 0).sum())
+    actual_total = len(sampled_df)
+    actual_fraud_rate = sampled_df['isFraud'].mean()
+    
+    # Verify total size
+    if actual_total != target_size:
+        raise ValueError(
+            f"Sampled data size mismatch: expected {target_size:,}, got {actual_total:,}"
+        )
+    
+    # Verify fraud count
+    if actual_fraud_count != n_fraud_target:
+        raise ValueError(
+            f"Fraud count mismatch: expected {n_fraud_target:,}, got {actual_fraud_count:,}"
+        )
+    
+    # Verify fraud rate
+    fraud_rate_diff = abs(actual_fraud_rate - fraud_rate)
+    if fraud_rate_diff > tolerance:
+        raise ValueError(
+            f"Fraud rate mismatch: expected {fraud_rate:.6f} ({fraud_rate*100:.4f}%), "
+            f"got {actual_fraud_rate:.6f} ({actual_fraud_rate*100:.4f}%), "
+            f"difference: {fraud_rate_diff:.6f} (tolerance: {tolerance:.6f})"
+        )
+    
+    print(f"\n✅ Sampled data verification:")
+    print(f"  Total rows: {actual_total:,} (target: {target_size:,}) ✓")
+    print(f"  Fraud: {actual_fraud_count:,} ({actual_fraud_rate*100:.4f}%) (target: {n_fraud_target:,}, {fraud_rate*100:.4f}%) ✓")
+    print(f"  Normal: {actual_normal_count:,} ({(1-actual_fraud_rate)*100:.4f}%) (target: {n_normal_target:,}, {(1-fraud_rate)*100:.4f}%) ✓")
+    print(f"  Fraud rate difference: {fraud_rate_diff:.6f} (tolerance: {tolerance:.6f}) ✓")
+    
+    return sampled_df
 
 
 def get_feature_info(df: pd.DataFrame) -> dict:

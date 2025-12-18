@@ -1,7 +1,4 @@
-"""
-Machine learning models for second view fraud detection.
-Uses LightGBM with threshold tuning (0.6-0.7) for better precision.
-"""
+"""LightGBM models with threshold tuning."""
 
 import numpy as np
 import pandas as pd
@@ -12,10 +9,7 @@ warnings.filterwarnings('ignore')
 
 
 class SecondViewLightGBM:
-    """
-    LightGBM model optimized for second view features.
-    Includes threshold tuning for better precision-recall balance.
-    """
+    """LightGBM model with threshold tuning."""
     
     def __init__(self, 
                  n_estimators: int = 2000,
@@ -283,4 +277,8 @@ def train_second_view_model(X_train, y_train,
               eval_set=eval_set)
     
     return model
+
+
+
+
 

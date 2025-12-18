@@ -1,8 +1,4 @@
-"""
-Data loader for seventh view model.
-Includes all card features (card1-card6), IP/dist features, and enhanced feature selection.
-Based on sixth view with improvements from MODEL_COMPARISON2.md.
-"""
+"""Data loader: same as sixth view."""
 
 import pandas as pd
 import numpy as np

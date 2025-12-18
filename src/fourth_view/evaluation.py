@@ -1,7 +1,4 @@
-"""
-Evaluation utilities for fourth view model.
-Includes threshold optimization for recall >= 0.9 with maximum precision.
-"""
+"""Evaluation utilities: threshold optimization for recall >= 0.9."""
 
 import numpy as np
 import pandas as pd
@@ -23,7 +20,7 @@ def evaluate_model(y_true: np.ndarray,
                    y_pred_proba: Optional[np.ndarray] = None,
                    threshold: float = 0.65,
                    verbose: bool = True) -> dict:
-    """Evaluate model performance with multiple metrics."""
+    """Evaluates model performance."""
     metrics = {}
     metrics['threshold'] = threshold
     
@@ -304,4 +301,8 @@ def plot_precision_recall_curve(y_true: np.ndarray,
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     
     plt.show()
+
+
+
+
 

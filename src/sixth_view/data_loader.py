@@ -1,8 +1,4 @@
-"""
-Data loader for sixth view model.
-Includes all card features (card1-card6), IP/dist features, and enhanced feature selection.
-Based on GitHub project: https://github.com/KovalevEvgeny/kaggle-fraud-detection
-"""
+"""Data loader: all card features (card1-card6), IP/dist features."""
 
 import pandas as pd
 import numpy as np
@@ -178,4 +174,8 @@ def get_feature_info(df: pd.DataFrame) -> dict:
         }
     
     return info
+
+
+
+
 

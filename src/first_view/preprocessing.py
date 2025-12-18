@@ -1,7 +1,4 @@
-"""
-Preprocessing utilities for first view model.
-Handles missing values and basic transformations for selected features.
-"""
+"""Preprocessing: missing values, type optimization."""
 
 import pandas as pd
 import numpy as np
@@ -11,24 +8,14 @@ from typing import List
 def preprocess_first_view_data(df: pd.DataFrame, 
                                is_train: bool = True) -> pd.DataFrame:
     """
-    Preprocess data for first view model.
+    Preprocesses data: handles missing values, creates indicators, optimizes types.
     
-    Steps:
-    1. Handle missing values (fill with appropriate values)
-    2. Create missing indicators
-    3. Optimize data types
+    Args:
+        df: Input dataframe.
+        is_train: Whether this is training data.
     
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input dataframe
-    is_train : bool
-        Whether this is training data
-        
-    Returns
-    -------
-    df : pd.DataFrame
-        Preprocessed dataframe
+    Returns:
+        Preprocessed dataframe.
     """
     df = df.copy()
     
@@ -123,5 +110,9 @@ def reduce_memory_usage(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
               f"({100 * (start_mem - end_mem) / start_mem:.1f}% reduction)")
     
     return df
+
+
+
+
 
 

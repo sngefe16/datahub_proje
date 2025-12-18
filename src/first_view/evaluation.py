@@ -1,6 +1,4 @@
-"""
-Evaluation utilities for first view model.
-"""
+"""Evaluation utilities: metrics, plots."""
 
 import numpy as np
 import pandas as pd
@@ -22,23 +20,16 @@ def evaluate_model(y_true: np.ndarray,
                    y_pred_proba: Optional[np.ndarray] = None,
                    verbose: bool = True) -> dict:
     """
-    Evaluate model performance with multiple metrics.
+    Evaluates model performance.
     
-    Parameters
-    ----------
-    y_true : np.ndarray
-        True labels
-    y_pred : np.ndarray
-        Predicted labels
-    y_pred_proba : np.ndarray, optional
-        Predicted probabilities
-    verbose : bool
-        Whether to print results
-        
-    Returns
-    -------
-    metrics : dict
-        Dictionary of evaluation metrics
+    Args:
+        y_true: True labels.
+        y_pred: Predicted labels.
+        y_pred_proba: Predicted probabilities.
+        verbose: Print results.
+    
+    Returns:
+        Dict of metrics (precision, recall, f1, auc_roc, etc.).
     """
     metrics = {}
     
@@ -141,5 +132,9 @@ def plot_roc_curve(y_true: np.ndarray,
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     
     plt.show()
+
+
+
+
 
 

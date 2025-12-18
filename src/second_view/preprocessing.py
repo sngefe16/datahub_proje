@@ -1,7 +1,4 @@
-"""
-Preprocessing utilities for second view model.
-Handles missing values and basic transformations for enhanced features.
-"""
+"""Preprocessing: missing values, memory optimization."""
 
 import pandas as pd
 import numpy as np
@@ -9,9 +6,7 @@ from typing import List
 
 
 def reduce_memory_usage(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
-    """
-    Reduce memory usage by optimizing data types.
-    """
+    """Reduces memory usage by optimizing data types."""
     start_mem = df.memory_usage().sum() / 1024**2
     
     for col in df.columns:
@@ -134,4 +129,8 @@ def preprocess_second_view_data(df: pd.DataFrame,
     print(f"Preprocessing complete. Shape: {df.shape}")
     
     return df
+
+
+
+
 

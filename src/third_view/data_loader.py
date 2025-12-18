@@ -1,7 +1,4 @@
-"""
-Data loader for third view model.
-Same as second view - loads transaction + identity data with enhanced features.
-"""
+"""Data loader: same as second view."""
 
 import pandas as pd
 import numpy as np
@@ -141,4 +138,8 @@ def get_feature_info(df: pd.DataFrame) -> dict:
         }
     
     return info
+
+
+
+
 

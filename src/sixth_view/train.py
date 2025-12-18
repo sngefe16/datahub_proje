@@ -1,17 +1,4 @@
-"""
-Training script for sixth view model.
-Targets AUC-ROC > 0.95, Recall > 0.9, and Precision > 0.5.
-Optimized for PyCharm execution (both script and console).
-Includes:
-- SMOTE for class imbalance handling (FIXED: proper NaN handling)
-- Enhanced feature engineering (ALL card features card1-card6, IP/dist features, C1-C14)
-- Feature selection
-- Ensemble methods (LightGBM, XGBoost, CatBoost) with optimized weights
-- Faster hyperparameter tuning (Optuna/Hyperopt) with optimized capacity
-- Cross-validation support (3-fold for faster CV)
-- Multi-objective threshold optimization (AUC-ROC > 0.95, Recall > 0.9, Precision > 0.5)
-Based on GitHub project: https://github.com/KovalevEvgeny/kaggle-fraud-detection
-"""
+"""Sixth view training pipeline: all card features, IP/dist, C1-C14, SMOTE, ensemble."""
 
 import pandas as pd
 import numpy as np
@@ -147,13 +134,17 @@ def main(threshold: float = 0.65,
     print(f"Validation set: {X_val.shape}")
     print(f"Fraud rate - Train: {y_train_split.mean():.4f}, Val: {y_val.mean():.4f}")
     
-    # Identify categorical features
+    # Identify categorical features (including float64 categorical features like C1-C14)
     categorical_features = []
     for col in feature_cols:
         if X_train_split[col].dtype == 'object' or X_train_split[col].dtype.name == 'category':
             categorical_features.append(col)
-        elif X_train_split[col].dtype in ['int8', 'int16', 'int32', 'int64']:
-            if X_train_split[col].nunique() < 50:
+        elif X_train_split[col].dtype in ['int8', 'int16', 'int32', 'int64', 'float64']:
+            # C1-C14 are categorical (encoded card features)
+            if col.startswith('C') and col[1:].isdigit():  # C1-C14
+                categorical_features.append(col)
+            # Low cardinality integer/float features are also categorical
+            elif X_train_split[col].nunique() < 500:  # Düşük cardinality → Categorical
                 categorical_features.append(col)
     
     print(f"Categorical features: {len(categorical_features)}")

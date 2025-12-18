@@ -1,10 +1,4 @@
-"""
-Machine learning models for sixth view fraud detection.
-Targets AUC-ROC > 0.95, Recall > 0.9, and Precision > 0.5.
-Uses enhanced LightGBM with optimized capacity, faster Optuna hyperparameter tuning,
-ensemble methods (LightGBM + XGBoost + CatBoost), and improved threshold optimization.
-Based on GitHub project: https://github.com/KovalevEvgeny/kaggle-fraud-detection
-"""
+"""LightGBM models: optimized capacity, faster Optuna tuning, ensemble."""
 
 import numpy as np
 import pandas as pd

@@ -1,9 +1,5 @@
 """
-Evaluation utilities for eighth view model.
-Extends seventh view with:
-1. Calibration (Isotonic) - Ensemble output calibration with validation-based fit
-2. Percentile Threshold Sweep - %1 → %5 range, recall target ≥ 0.90
-3. Cost-Based Threshold - FN/FP cost scenarios (10x, 20x, 50x), expected loss plots
+Evaluation utilities: metrics, calibration, threshold optimization (percentile, cost-based).
 """
 
 import numpy as np
@@ -27,16 +23,11 @@ warnings.filterwarnings('ignore')
 
 class TimeBasedStratifiedKFold:
     """
-    Time-based stratified K-Fold cross-validator.
-    Splits data based on TransactionDT to prevent leakage while maintaining class distribution.
-    Based on FraudSquad approach.
+    Time-based K-Fold: splits by TransactionDT to prevent temporal leakage.
     
-    Parameters
-    ----------
-    n_splits : int
-        Number of folds
-    time_col : str
-        Time column name (default: 'TransactionDT')
+    Args:
+        n_splits: Number of folds.
+        time_col: Time column name (default: 'TransactionDT').
     """
     def __init__(self, n_splits: int = 5, time_col: str = 'TransactionDT'):
         self.n_splits = n_splits
@@ -1023,6 +1014,132 @@ def cost_based_threshold_optimization(y_true: np.ndarray,
             print("=" * 70)
     
     return results_dict
+
+
+def cost_sensitive_threshold_with_precision(y_true: np.ndarray,
+                                            y_pred_proba: np.ndarray,
+                                            min_recall: float = 0.90,
+                                            min_precision: float = 0.10,
+                                            fn_cost: float = 10.0,
+                                            fp_cost: float = 1.0,
+                                            threshold_range: Tuple[float, float] = (0.01, 0.50),
+                                            n_thresholds: int = 200,
+                                            verbose: bool = True) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+    """
+    Find threshold that minimizes cost while meeting recall and precision constraints.
+    
+    Parameters
+    ----------
+    y_true : np.ndarray
+        True labels
+    y_pred_proba : np.ndarray
+        Predicted probabilities
+    min_recall : float
+        Minimum required recall
+    min_precision : float
+        Minimum required precision
+    fn_cost : float
+        Cost of false negative
+    fp_cost : float
+        Cost of false positive
+    threshold_range : tuple
+        Range of thresholds to search
+    n_thresholds : int
+        Number of thresholds to try
+    verbose : bool
+        Whether to print results
+        
+    Returns
+    -------
+    best_threshold : float or None
+        Best threshold found (None if no threshold meets constraints)
+    best_precision : float or None
+        Precision at best threshold
+    best_recall : float or None
+        Recall at best threshold
+    """
+    from sklearn.metrics import precision_score, recall_score, confusion_matrix
+    
+    thresholds = np.linspace(threshold_range[0], threshold_range[1], n_thresholds)
+    valid_thresholds = []
+    
+    for thresh in thresholds:
+        y_pred = (y_pred_proba >= thresh).astype(int)
+        recall = recall_score(y_true, y_pred, zero_division=0)
+        precision = precision_score(y_true, y_pred, zero_division=0)
+        
+        if recall >= min_recall and precision >= min_precision:
+            tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+            cost = fn * fn_cost + fp * fp_cost
+            valid_thresholds.append({
+                'threshold': thresh,
+                'recall': recall,
+                'precision': precision,
+                'cost': cost
+            })
+    
+    if valid_thresholds:
+        # Choose threshold with minimum cost
+        best = min(valid_thresholds, key=lambda x: x['cost'])
+        if verbose:
+            print(f"Optimal threshold: {best['threshold']:.4f}")
+            print(f"  Cost: {best['cost']:.2f}")
+            print(f"  Recall: {best['recall']:.4f}")
+            print(f"  Precision: {best['precision']:.4f}")
+        return best['threshold'], best['precision'], best['recall']
+    else:
+        if verbose:
+            print(f"No threshold found meeting constraints (recall >= {min_recall}, precision >= {min_precision})")
+        return None, None, None
+
+
+def find_threshold_from_roc(y_true: np.ndarray,
+                             y_pred_proba: np.ndarray,
+                             min_recall: float = 0.90,
+                             verbose: bool = True) -> Optional[float]:
+    """
+    Find threshold using ROC curve analysis.
+    Finds threshold where recall (TPR) >= min_recall with lowest FPR (highest precision).
+    
+    Parameters
+    ----------
+    y_true : np.ndarray
+        True labels
+    y_pred_proba : np.ndarray
+        Predicted probabilities
+    min_recall : float
+        Minimum required recall (TPR)
+    verbose : bool
+        Whether to print results
+        
+    Returns
+    -------
+    best_threshold : float or None
+        Best threshold found (None if no threshold meets recall target)
+    """
+    from sklearn.metrics import roc_curve
+    
+    fpr, tpr, thresholds = roc_curve(y_true, y_pred_proba)
+    
+    # Find threshold where recall (TPR) >= min_recall
+    valid_indices = np.where(tpr >= min_recall)[0]
+    
+    if len(valid_indices) > 0:
+        # Choose threshold with lowest FPR (highest precision)
+        best_idx = valid_indices[np.argmin(fpr[valid_indices])]
+        best_threshold = thresholds[best_idx]
+        
+        if verbose:
+            print(f"ROC-based threshold: {best_threshold:.4f}")
+            print(f"  TPR (Recall): {tpr[best_idx]:.4f}")
+            print(f"  FPR: {fpr[best_idx]:.4f}")
+        
+        return best_threshold
+    else:
+        if verbose:
+            print(f"No threshold found meeting recall target ({min_recall:.2f})")
+            print(f"  Best available recall: {tpr.max():.4f}")
+        return None
 
 
 def plot_cost_based_threshold(y_true: np.ndarray,

@@ -1,8 +1,4 @@
-"""
-Evaluation utilities for fifth view model.
-Extends fourth view with cross-validation metrics.
-Includes threshold optimization for recall >= 0.9 with maximum precision.
-"""
+"""Evaluation utilities: adds cross-validation metrics."""
 
 import numpy as np
 import pandas as pd
@@ -25,7 +21,7 @@ def evaluate_model(y_true: np.ndarray,
                    y_pred_proba: Optional[np.ndarray] = None,
                    threshold: float = 0.65,
                    verbose: bool = True) -> dict:
-    """Evaluate model performance with multiple metrics."""
+    """Evaluates model performance."""
     metrics = {}
     metrics['threshold'] = threshold
     

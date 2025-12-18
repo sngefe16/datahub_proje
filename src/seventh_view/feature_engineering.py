@@ -1,8 +1,4 @@
-"""
-Feature engineering for seventh view model.
-Extends sixth view with same features (UID, card, C, dist features).
-Based on sixth view improvements from MODEL_COMPARISON2.md.
-"""
+"""Feature engineering: same as sixth view."""
 
 import pandas as pd
 import numpy as np
@@ -13,7 +9,7 @@ from typing import Optional, List
 
 def create_time_features(df: pd.DataFrame, 
                         time_col: str = 'TransactionDT') -> pd.DataFrame:
-    """Create time-based features from TransactionDT."""
+    """Creates time features: day_of_week, hour, day, week, is_weekend, is_night."""
     df = df.copy()
     
     if time_col not in df.columns:
@@ -424,15 +420,20 @@ def create_statistical_features(df: pd.DataFrame) -> pd.DataFrame:
         df['DeviceInfo_amt_max'] = device_info_for_groupby.map(device_info_stats['max'])
     
     # === Identity-based Statistics ===
+    # Note: id_28, id_29, id_30, id_31 are categorical features
+    # We only create TransactionAmt-related features (categorical feature's relationship with TransactionAmt)
     for id_col in ['id_28', 'id_29', 'id_30', 'id_31']:
-        if id_col in df.columns:
-            # Only for numeric id columns
-            if df[id_col].dtype in ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']:
-                id_stats = df.groupby(id_col)['TransactionAmt'].agg(['mean', 'std', 'min', 'max'])
-                df[f'{id_col}_amt_mean'] = df[id_col].map(id_stats['mean'])
-                df[f'{id_col}_amt_std'] = df[id_col].map(id_stats['std']).fillna(0)
-                df[f'{id_col}_amt_min'] = df[id_col].map(id_stats['min'])
-                df[f'{id_col}_amt_max'] = df[id_col].map(id_stats['max'])
+        if id_col in df.columns and 'TransactionAmt' in df.columns:
+            # Handle categorical and numeric types
+            if df[id_col].dtype.name == 'category':
+                id_avg_amt = df.groupby(id_col)['TransactionAmt'].mean()
+                df[f'{id_col}_avg_amt'] = df[id_col].map(id_avg_amt)
+                df[f'TransactionAmt_to_{id_col}_avg'] = df['TransactionAmt'] / (df[f'{id_col}_avg_amt'] + 1e-6)
+            elif df[id_col].dtype in ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']:
+                # For backward compatibility, but these should be categorical
+                id_avg_amt = df.groupby(id_col)['TransactionAmt'].mean()
+                df[f'{id_col}_avg_amt'] = df[id_col].map(id_avg_amt)
+                df[f'TransactionAmt_to_{id_col}_avg'] = df['TransactionAmt'] / (df[f'{id_col}_avg_amt'] + 1e-6)
     
     # === Product-based Statistics ===
     if 'ProductCD' in df.columns:
@@ -1064,11 +1065,10 @@ def create_ip_dist_features(df: pd.DataFrame) -> pd.DataFrame:
             df['dist1_avg_amt'] = df['dist1'].map(dist1_avg_amt)
             df['TransactionAmt_to_dist1_avg'] = df['TransactionAmt'] / (df['dist1_avg_amt'] + 1e-6)
         
-        # Distance risk: very high or very low distance might indicate fraud
-        if df['dist1'].dtype in ['float64', 'int64', 'float32', 'int32']:
-            dist1_q99 = df['dist1'].quantile(0.99)
-            dist1_q01 = df['dist1'].quantile(0.01)
-            df['dist1_is_extreme'] = ((df['dist1'] >= dist1_q99) | (df['dist1'] <= dist1_q01)).astype(int)
+        # Categorical-specific: dist1 is categorical, so we don't use quantile-based features
+        # Instead, we use frequency-based risk (rare dist1 values might indicate fraud)
+        dist1_counts = df['dist1'].value_counts()
+        df['dist1_is_rare'] = (df['dist1'].map(dist1_counts) <= 10).astype(int)
     
     # Dist2 features
     if 'dist2' in df.columns:
@@ -1080,11 +1080,10 @@ def create_ip_dist_features(df: pd.DataFrame) -> pd.DataFrame:
             df['dist2_avg_amt'] = df['dist2'].map(dist2_avg_amt)
             df['TransactionAmt_to_dist2_avg'] = df['TransactionAmt'] / (df['dist2_avg_amt'] + 1e-6)
         
-        # Distance risk
-        if df['dist2'].dtype in ['float64', 'int64', 'float32', 'int32']:
-            dist2_q99 = df['dist2'].quantile(0.99)
-            dist2_q01 = df['dist2'].quantile(0.01)
-            df['dist2_is_extreme'] = ((df['dist2'] >= dist2_q99) | (df['dist2'] <= dist2_q01)).astype(int)
+        # Categorical-specific: dist2 is categorical, so we don't use quantile-based features
+        # Instead, we use frequency-based risk (rare dist2 values might indicate fraud)
+        dist2_counts = df['dist2'].value_counts()
+        df['dist2_is_rare'] = (df['dist2'].map(dist2_counts) <= 10).astype(int)
     
     # Dist1-Dist2 combo
     if 'dist1' in df.columns and 'dist2' in df.columns:
@@ -1094,10 +1093,9 @@ def create_ip_dist_features(df: pd.DataFrame) -> pd.DataFrame:
             df['dist1_dist2_avg_amt'] = df.groupby(['dist1', 'dist2'])['TransactionAmt'].transform('mean')
             df['TransactionAmt_to_dist1_dist2_avg'] = df['TransactionAmt'] / (df['dist1_dist2_avg_amt'] + 1e-6)
         
-        # Distance difference
-        if df['dist1'].dtype in ['float64', 'int64', 'float32', 'int32'] and df['dist2'].dtype in ['float64', 'int64', 'float32', 'int32']:
-            df['dist_diff'] = (df['dist1'] - df['dist2']).abs()
-            df['dist_sum'] = df['dist1'] + df['dist2']
+        # Categorical-specific: dist1 and dist2 are categorical, so we don't use numeric operations
+        # Instead, we check if dist1 and dist2 match (categorical comparison)
+        df['dist1_dist2_match'] = (df['dist1'] == df['dist2']).astype(int)
     
     # Card-Distance interactions
     if 'card1' in df.columns and 'dist1' in df.columns:
@@ -1134,8 +1132,20 @@ def create_card_related_features(df: pd.DataFrame) -> pd.DataFrame:
         return df
     
     # Frequency features for each C column
+    # Note: C1-C14 are categorical features, but we can still use them for frequency and groupby operations
     for c_col in available_c_cols:
-        if df[c_col].dtype in ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']:
+        # Handle both categorical and numeric types
+        if df[c_col].dtype.name == 'category':
+            # For categorical, use cat.codes for numeric operations
+            c_col_for_freq = df[c_col].cat.codes
+            c_freq = c_col_for_freq.value_counts()
+            df[f'{c_col}_freq'] = c_col_for_freq.map(c_freq)
+            
+            if 'TransactionAmt' in df.columns:
+                c_avg_amt = df.groupby(c_col)['TransactionAmt'].mean()
+                df[f'{c_col}_avg_amt'] = df[c_col].map(c_avg_amt)
+                df[f'TransactionAmt_to_{c_col}_avg'] = df['TransactionAmt'] / (df[f'{c_col}_avg_amt'] + 1e-6)
+        elif df[c_col].dtype in ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']:
             c_freq = df[c_col].value_counts()
             df[f'{c_col}_freq'] = df[c_col].map(c_freq)
             
@@ -1144,16 +1154,31 @@ def create_card_related_features(df: pd.DataFrame) -> pd.DataFrame:
                 df[f'{c_col}_avg_amt'] = df[c_col].map(c_avg_amt)
                 df[f'TransactionAmt_to_{c_col}_avg'] = df['TransactionAmt'] / (df[f'{c_col}_avg_amt'] + 1e-6)
     
-    # Statistical features across C columns
+    # Categorical-specific features across C columns
+    # Note: C1-C14 are categorical features, so we create categorical-specific features instead of numeric statistics
     if len(available_c_cols) > 1:
-        # Sum of C columns
-        numeric_c_cols = [col for col in available_c_cols if df[col].dtype in ['float64', 'int64', 'float32', 'int32']]
-        if numeric_c_cols:
-            df['C_sum'] = df[numeric_c_cols].sum(axis=1)
-            df['C_mean'] = df[numeric_c_cols].mean(axis=1)
-            df['C_std'] = df[numeric_c_cols].std(axis=1).fillna(0)
-            df['C_max'] = df[numeric_c_cols].max(axis=1)
-            df['C_min'] = df[numeric_c_cols].min(axis=1)
+        # Convert C columns to string for comparison (handles both categorical and numeric)
+        c_str_cols = {}
+        for col in available_c_cols:
+            if df[col].dtype.name == 'category':
+                c_str_cols[col] = df[col].astype(str)
+            else:
+                c_str_cols[col] = df[col].astype(str)
+        
+        # Count of unique C values per row (categorical diversity) - optimized
+        c_str_df = pd.DataFrame(c_str_cols)
+        df['C_unique_count'] = c_str_df.nunique(axis=1)
+        
+        # Most common C value frequency (mode frequency across C columns) - optimized
+        # This is a categorical-specific feature: how many times the most common C value appears
+        from collections import Counter
+        def get_mode_freq(row):
+            values = [v for v in row.values if pd.notna(v) and str(v) != 'nan']
+            if values:
+                return Counter(values).most_common(1)[0][1]
+            return 0
+        
+        df['C_mode_freq'] = c_str_df.apply(get_mode_freq, axis=1)
     
     # C column interactions with cards
     if 'card1' in df.columns:
@@ -1424,6 +1449,138 @@ def create_all_sixth_view_features(df: pd.DataFrame,
     df = create_domain_specific_features(df)
     
     print(f"Feature engineering complete. Final shape: {df.shape}")
+    
+    # Missing value check and detailed logging after feature engineering
+    df = check_and_log_missing_values_after_feature_engineering(df, is_train=is_train)
+    
+    return df
+
+
+def check_and_log_missing_values_after_feature_engineering(df: pd.DataFrame, 
+                                                           is_train: bool = True,
+                                                           verbose: bool = True) -> pd.DataFrame:
+    """
+    Check for missing values after feature engineering and log detailed statistics.
+    Also fills any remaining missing values to ensure data quality.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input dataframe after feature engineering
+    is_train : bool
+        Whether this is training data
+    verbose : bool
+        Whether to print detailed logs
+        
+    Returns
+    -------
+    df : pd.DataFrame
+        DataFrame with missing values filled
+    """
+    print("\n" + "=" * 70)
+    print("MISSING VALUE CHECK AFTER FEATURE ENGINEERING")
+    print("=" * 70)
+    
+    total_rows = len(df)
+    missing_summary = df.isna().sum()
+    columns_with_missing = missing_summary[missing_summary > 0]
+    total_missing_count = missing_summary.sum()
+    
+    if verbose:
+        print(f"Total rows: {total_rows:,}")
+        print(f"Total missing values: {total_missing_count:,}")
+        print(f"Columns with missing values: {len(columns_with_missing)}")
+    
+    if len(columns_with_missing) == 0:
+        print("✅ No missing values found after feature engineering!")
+        print("=" * 70)
+        return df
+    
+    # Detailed logging
+    print(f"\n⚠️  WARNING: {len(columns_with_missing)} columns have missing values after feature engineering!")
+    print("This should not happen. Missing values will be filled.")
+    print("\nDetailed missing value statistics:")
+    print("-" * 70)
+    
+    # Group by missing percentage
+    missing_stats = []
+    for col in columns_with_missing.index:
+        missing_count = missing_summary[col]
+        missing_pct = (missing_count / total_rows) * 100
+        dtype = str(df[col].dtype)
+        missing_stats.append({
+            'column': col,
+            'missing_count': missing_count,
+            'missing_pct': missing_pct,
+            'dtype': dtype
+        })
+    
+    # Sort by missing count
+    missing_stats.sort(key=lambda x: x['missing_count'], reverse=True)
+    
+    # Print statistics
+    print(f"\nTop 20 columns with missing values:")
+    print(f"{'Column':<40} {'Missing Count':<15} {'Missing %':<12} {'Dtype':<10}")
+    print("-" * 70)
+    for stat in missing_stats[:20]:
+        print(f"{stat['column']:<40} {stat['missing_count']:>15,} {stat['missing_pct']:>11.2f}% {stat['dtype']:<10}")
+    
+    # Group by missing percentage ranges
+    no_missing = []
+    low_missing = []  # < 1%
+    medium_missing = []  # 1-10%
+    high_missing = []  # > 10%
+    
+    for stat in missing_stats:
+        if stat['missing_pct'] == 0:
+            no_missing.append(stat)
+        elif stat['missing_pct'] < 1:
+            low_missing.append(stat)
+        elif stat['missing_pct'] < 10:
+            medium_missing.append(stat)
+        else:
+            high_missing.append(stat)
+    
+    print(f"\nMissing value distribution:")
+    print(f"  Low missing (<1%): {len(low_missing)} columns")
+    print(f"  Medium missing (1-10%): {len(medium_missing)} columns")
+    print(f"  High missing (>10%): {len(high_missing)} columns")
+    
+    # Fill missing values
+    print(f"\nFilling missing values...")
+    numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
+    categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
+    
+    filled_numeric = 0
+    filled_categorical = 0
+    
+    for col in columns_with_missing.index:
+        if col in numeric_cols:
+            fill_value = df[col].median() if df[col].notna().sum() > 0 else 0
+            df[col] = df[col].fillna(fill_value)
+            filled_numeric += 1
+        elif col in categorical_cols:
+            df[col] = df[col].fillna('missing')
+            filled_categorical += 1
+    
+    # Final check
+    remaining_nans = df.isna().sum().sum()
+    if remaining_nans > 0:
+        print(f"⚠️  Warning: {remaining_nans} NaN values still remain. Force filling with 0...")
+        df = df.fillna(0)
+        remaining_nans = df.isna().sum().sum()
+    
+    if verbose:
+        print(f"  Filled {filled_numeric} numeric columns with median/0")
+        print(f"  Filled {filled_categorical} categorical columns with 'missing'")
+        print(f"  Remaining NaN values: {remaining_nans}")
+    
+    if remaining_nans == 0:
+        print("✅ All missing values have been filled!")
+    else:
+        print(f"⚠️  Warning: {remaining_nans} NaN values still remain after filling!")
+    
+    print("=" * 70)
     
     return df
 

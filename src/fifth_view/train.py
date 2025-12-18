@@ -1,16 +1,4 @@
-"""
-Training script for fifth view model.
-Targets AUC-ROC > 0.95 and Recall > 0.9.
-Optimized for PyCharm execution (both script and console).
-Includes:
-- SMOTE for class imbalance handling
-- Enhanced feature engineering
-- Feature selection
-- Ensemble methods (LightGBM, XGBoost, CatBoost)
-- Hyperparameter tuning (Optuna/Hyperopt) with higher capacity models
-- Cross-validation support
-- Threshold optimization (recall >= 0.9, maximize precision)
-"""
+"""Fifth view training pipeline: SMOTE, enhanced features, ensemble, hyperparameter tuning."""
 
 import pandas as pd
 import numpy as np

@@ -1,7 +1,4 @@
-"""
-Data loader for fourth view model.
-Same as third view - loads transaction + identity data with enhanced features.
-"""
+"""Data loader: same as third view."""
 
 import pandas as pd
 import numpy as np

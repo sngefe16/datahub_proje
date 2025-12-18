@@ -1,10 +1,4 @@
-"""
-Feature engineering for fourth view model.
-Extends third view with:
-- Enhanced statistical features (percentile, quantile, skew, kurtosis)
-- Enhanced lag features (rolling windows, multiple time windows)
-- More extended combinations
-"""
+"""Feature engineering: same as fourth view."""
 
 import pandas as pd
 import numpy as np
@@ -15,7 +9,7 @@ from typing import Optional, List
 
 def create_time_features(df: pd.DataFrame, 
                         time_col: str = 'TransactionDT') -> pd.DataFrame:
-    """Create time-based features from TransactionDT."""
+    """Creates time features: day_of_week, hour, day, week, is_weekend, is_night."""
     df = df.copy()
     
     if time_col not in df.columns:

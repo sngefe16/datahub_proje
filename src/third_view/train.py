@@ -1,8 +1,4 @@
-"""
-Training script for third view model.
-Optimized for PyCharm execution (both script and console).
-Includes hyperparameter tuning (Optuna/Hyperopt) and threshold tuning.
-"""
+"""Third view training pipeline with hyperparameter tuning."""
 
 import pandas as pd
 import numpy as np
@@ -271,4 +267,8 @@ if __name__ == "__main__":
     
     # Default: without hyperparameter tuning for faster execution
     model, metrics, threshold_results, optimal_threshold = main(threshold=0.65)
+
+
+
+
 

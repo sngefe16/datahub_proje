@@ -1,12 +1,4 @@
-"""
-Training script for fourth view model.
-Optimized for PyCharm execution (both script and console).
-Includes:
-- Feature selection
-- Ensemble methods (LightGBM, XGBoost, CatBoost)
-- Hyperparameter tuning (Optuna/Hyperopt)
-- Threshold optimization (recall >= 0.9, maximize precision)
-"""
+"""Fourth view training pipeline: feature selection, ensemble, hyperparameter tuning."""
 
 import pandas as pd
 import numpy as np

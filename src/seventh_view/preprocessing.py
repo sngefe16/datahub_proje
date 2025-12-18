@@ -1,7 +1,4 @@
-"""
-Preprocessing utilities for seventh view model.
-Enhanced with proper NaN handling for SMOTE and improved SMOTE sampling_strategy for better recall.
-"""
+"""Preprocessing: improved SMOTE sampling_strategy for better recall."""
 
 import pandas as pd
 import numpy as np
@@ -22,32 +19,197 @@ def reduce_memory_usage(df: pd.DataFrame, verbose: bool = True) -> pd.DataFrame:
     """Reduce memory usage by optimizing data types."""
     start_mem = df.memory_usage().sum() / 1024**2
     
+    if verbose:
+        print("\n" + "=" * 70)
+        print("REDUCE MEMORY USAGE - DETAILED LOGGING")
+        print("=" * 70)
+    
+    skipped_categorical = []
+    skipped_special = []
+    processed_numeric = []
+    errors = []
+    converted_to_category = []
+    
     for col in df.columns:
         if col in ['TransactionID', 'isFraud']:
+            skipped_special.append(col)
             continue
             
         col_type = df[col].dtype
+        col_type_str = str(col_type)
         
-        if col_type != object:
-            c_min = df[col].min()
-            c_max = df[col].max()
+        # CRITICAL: Check categorical FIRST using multiple methods
+        is_categorical_by_dtype = col_type_str.startswith('category') or col_type_str == 'category'
+        is_categorical_by_api = pd.api.types.is_categorical_dtype(df[col])
+        has_cat_attribute = hasattr(df[col], 'cat')
+        
+        # Try to access .cat attribute to be absolutely sure
+        is_categorical_actual = False
+        try:
+            if has_cat_attribute:
+                _ = df[col].cat  # Try to access it
+                is_categorical_actual = True
+        except:
+            pass
+        
+        is_categorical = is_categorical_by_dtype or is_categorical_by_api or is_categorical_actual
+        
+        # Check numeric (but only if NOT categorical)
+        is_numeric = False
+        if not is_categorical:
+            is_numeric = pd.api.types.is_numeric_dtype(df[col])
+        
+        if verbose:
+            print(f"\nProcessing column: {col}")
+            print(f"  dtype: {col_type_str}")
+            print(f"  dtype.name: {col_type.name if hasattr(col_type, 'name') else 'N/A'}")
+            print(f"  is_categorical_by_dtype: {is_categorical_by_dtype}")
+            print(f"  is_categorical_by_api: {is_categorical_by_api}")
+            print(f"  has_cat_attribute: {has_cat_attribute}")
+            print(f"  is_categorical_actual: {is_categorical_actual}")
+            print(f"  is_categorical (FINAL): {is_categorical}")
+            print(f"  is_numeric_dtype: {is_numeric}")
+            print(f"  col_type != object: {col_type != object}")
+        
+        # CRITICAL: Skip categorical columns FIRST - before ANY other operations
+        if is_categorical:
+            if verbose:
+                print(f"  → SKIPPED (categorical - detected by: dtype={is_categorical_by_dtype}, api={is_categorical_by_api}, attr={has_cat_attribute})")
+            skipped_categorical.append((col, col_type_str))
+            continue
+        
+        # Only process numeric columns (skip object and category)
+        # CRITICAL: Triple-check that it's NOT categorical and IS numeric before calling min/max
+        # ADDITIONAL SAFETY: Check dtype.name explicitly to avoid any edge cases
+        dtype_name = getattr(col_type, 'name', str(col_type))
+        is_really_numeric = (
+            col_type != object and 
+            is_numeric and 
+            not is_categorical and
+            dtype_name not in ['category', 'object'] and
+            not dtype_name.startswith('category')
+        )
+        
+        if is_really_numeric:
+            # FINAL SAFETY CHECK: Try to access .cat attribute - if it exists, skip BEFORE any min/max
+            if hasattr(df[col], 'cat'):
+                try:
+                    _ = df[col].cat  # Try to access it - if this works, it's categorical
+                    if verbose:
+                        print(f"  → SKIPPED (has .cat attribute - is categorical)")
+                    skipped_categorical.append((col, col_type_str))
+                    continue
+                except:
+                    pass  # If accessing .cat fails, it's not categorical
             
-            if str(col_type)[:3] == 'int':
-                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
-                    df[col] = df[col].astype(np.int8)
-                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
-                    df[col] = df[col].astype(np.int16)
-                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
-                    df[col] = df[col].astype(np.int32)
+            # CRITICAL: Before attempting min/max, do a final check by trying a safe operation
+            # Try to check if column is actually categorical by attempting to access categories
+            try:
+                # This will fail if column is not categorical
+                if hasattr(df[col], 'cat'):
+                    _ = list(df[col].cat.categories)
+                    if verbose:
+                        print(f"  → SKIPPED (can access .cat.categories - is categorical)")
+                    skipped_categorical.append((col, col_type_str))
+                    continue
+            except:
+                pass  # If this fails, column is not categorical (or doesn't have .cat)
+            
+            # CRITICAL: Wrap the entire min/max operation in a try-except
+            # This is the final safety net - if ANY error occurs, skip the column
+            try:
+                if verbose:
+                    print(f"  → Processing numeric column (attempting min/max)...")
+                    print(f"    Checking for NaN values: {df[col].isna().sum()} NaN values")
+                
+                # Use skipna=True to handle NaN values safely
+                # But FIRST check if it's really numeric by trying a safe operation
+                if df[col].isna().all():
+                    if verbose:
+                        print(f"    → SKIPPED (all values are NaN)")
+                    continue
+                
+                # CRITICAL: Wrap min/max in try-except to catch ANY errors (especially categorical)
+                # This is the most important safety check
+                try:
+                    c_min = df[col].min(skipna=True)
+                    c_max = df[col].max(skipna=True)
+                except Exception as e:
+                    # If we get ANY error (especially categorical), skip this column
+                    error_str = str(e).lower()
+                    if any(keyword in error_str for keyword in ['categorical', 'ordered', 'category']):
+                        if verbose:
+                            print(f"    → ERROR (categorical detected): {str(e)}")
+                            print(f"    → SKIPPED (is categorical despite checks)")
+                        skipped_categorical.append((col, col_type_str))
+                        continue
+                    else:
+                        # For other errors, log and skip
+                        if verbose:
+                            print(f"    → ERROR: {str(e)}")
+                            print(f"    → SKIPPED (cannot optimize)")
+                        errors.append((col, col_type_str, str(e)))
+                        continue
+                
+                if verbose:
+                    print(f"    min: {c_min}, max: {c_max}")
+                
+                if str(col_type)[:3] == 'int':
+                    if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                        df[col] = df[col].astype(np.int8)
+                        if verbose:
+                            print(f"    → Optimized to int8")
+                    elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                        df[col] = df[col].astype(np.int16)
+                        if verbose:
+                            print(f"    → Optimized to int16")
+                    elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                        df[col] = df[col].astype(np.int32)
+                        if verbose:
+                            print(f"    → Optimized to int32")
+                processed_numeric.append(col)
+            except (TypeError, ValueError) as e:
+                # Skip columns that can't be optimized (e.g., unordered categorical)
+                error_msg = str(e)
+                if verbose:
+                    print(f"  → ERROR: {error_msg}")
+                    print(f"    → SKIPPED (cannot optimize)")
+                errors.append((col, col_type_str, error_msg))
+                continue
         else:
             if df[col].nunique() < 100:
                 df[col] = df[col].astype('category')
+                if verbose:
+                    print(f"  → Converted to category (nunique < 100)")
+                converted_to_category.append(col)
+            else:
+                if verbose:
+                    print(f"  → SKIPPED (object type, nunique >= 100)")
     
     end_mem = df.memory_usage().sum() / 1024**2
     
     if verbose:
-        print(f"Memory usage reduced from {start_mem:.2f} MB to {end_mem:.2f} MB "
+        print("\n" + "=" * 70)
+        print("SUMMARY")
+        print("=" * 70)
+        print(f"Skipped (categorical): {len(skipped_categorical)} columns")
+        if skipped_categorical and len(skipped_categorical) <= 20:
+            for col, dtype in skipped_categorical:
+                print(f"  - {col} ({dtype})")
+        print(f"Skipped (special): {len(skipped_special)} columns ({', '.join(skipped_special)})")
+        print(f"Processed (numeric): {len(processed_numeric)} columns")
+        if processed_numeric and len(processed_numeric) <= 20:
+            print(f"  - {', '.join(processed_numeric)}")
+        print(f"Errors: {len(errors)} columns")
+        if errors:
+            for col, dtype, error in errors:
+                print(f"  - {col} ({dtype}): {error}")
+        print(f"Converted to category: {len(converted_to_category)} columns")
+        if converted_to_category and len(converted_to_category) <= 20:
+            print(f"  - {', '.join(converted_to_category)}")
+        print(f"\nMemory usage reduced from {start_mem:.2f} MB to {end_mem:.2f} MB "
               f"({100 * (start_mem - end_mem) / start_mem:.1f}% reduction)")
+        print("=" * 70)
     
     return df
 
@@ -108,26 +270,31 @@ def preprocess_sixth_view_data(df: pd.DataFrame,
         if df['ProductCD'].isna().sum() > 0:
             df['ProductCD'] = df['ProductCD'].fillna('missing')
     
-    # IP/Distance features (dist1, dist2)
+    # IP/Distance features (dist1, dist2) - Categorical
     for dist_col in ['dist1', 'dist2']:
         if dist_col in df.columns:
             df[f'{dist_col}_isMissing'] = df[dist_col].isna().astype(int)
-            # Fill with median for numeric, or -1 if all NaN
-            if df[dist_col].dtype in ['float64', 'int64', 'float32', 'int32']:
-                fill_value = df[dist_col].median() if df[dist_col].notna().sum() > 0 else -1
-                df[dist_col] = df[dist_col].fillna(fill_value)
+            # Categorical imputation: use mode or -1
+            if df[dist_col].notna().sum() > 0:
+                mode_values = df[dist_col].mode()
+                fill_value = mode_values[0] if len(mode_values) > 0 else -1
             else:
-                df[dist_col] = df[dist_col].fillna(-1)
+                fill_value = -1
+            df[dist_col] = df[dist_col].fillna(fill_value)
     
-    # Card-related features (C1-C14)
+    # Card-related features (C1-C14) - Categorical imputation
     for c_col in [f'C{i}' for i in range(1, 15)]:
         if c_col in df.columns:
             df[f'{c_col}_isMissing'] = df[c_col].isna().astype(int)
-            if df[c_col].dtype in ['float64', 'int64', 'float32', 'int32']:
-                fill_value = df[c_col].median() if df[c_col].notna().sum() > 0 else -1
-                df[c_col] = df[c_col].fillna(fill_value)
+            # Categorical imputation: use mode for categorical features
+            if df[c_col].notna().sum() > 0:
+                mode_values = df[c_col].mode()
+                fill_value = mode_values[0] if len(mode_values) > 0 else -1
             else:
-                df[c_col] = df[c_col].fillna(-1)
+                fill_value = -1
+            df[c_col] = df[c_col].fillna(fill_value)
+            # Convert to categorical type
+            df[c_col] = df[c_col].astype('category')
     
     # === Identity Features ===
     if 'DeviceType' in df.columns:
@@ -141,11 +308,47 @@ def preprocess_sixth_view_data(df: pd.DataFrame,
     for id_col in ['id_28', 'id_29', 'id_30', 'id_31']:
         if id_col in df.columns:
             df[f'{id_col}_isMissing'] = df[id_col].isna().astype(int)
+            # Categorical imputation: use mode or 'missing'
             if df[id_col].dtype in ['float64', 'int64', 'float32', 'int32', 'int16', 'int8']:
-                fill_value = df[id_col].median() if df[id_col].notna().sum() > 0 else -1
+                # Use mode for categorical features
+                if df[id_col].notna().sum() > 0:
+                    mode_values = df[id_col].mode()
+                    fill_value = mode_values[0] if len(mode_values) > 0 else -1
+                else:
+                    fill_value = -1
                 df[id_col] = df[id_col].fillna(fill_value)
             else:
                 df[id_col] = df[id_col].fillna('missing')
+    
+    # CRITICAL: Mark ALL features as categorical EXCEPT TransactionAmt and TransactionDT
+    # According to requirements: "amount ve time özelliği hariç hepsi kategorik"
+    print("Marking features as categorical (except TransactionAmt and TransactionDT)...")
+    numeric_only_cols = ['TransactionAmt', 'TransactionDT']
+    converted_to_categorical = []
+    
+    for col in df.columns:
+        if col in numeric_only_cols or col in ['TransactionID', 'isFraud']:
+            continue  # Keep these as numeric
+        if col.endswith('_isMissing'):
+            continue  # Keep missing indicators as numeric (int)
+        
+        # Skip if already categorical
+        if pd.api.types.is_categorical_dtype(df[col]):
+            continue
+        
+        # Skip if already object/string (will be converted to category later in reduce_memory_usage)
+        if df[col].dtype == 'object':
+            continue
+        
+        # Convert numeric columns (card1-card6, addr1-addr2, dist1-dist2, id_28-id_31, etc.) to categorical
+        if pd.api.types.is_numeric_dtype(df[col]):
+            df[col] = df[col].astype('category')
+            converted_to_categorical.append(col)
+    
+    if converted_to_categorical:
+        print(f"  Converted {len(converted_to_categorical)} numeric columns to categorical")
+        if len(converted_to_categorical) <= 20:
+            print(f"  Columns: {', '.join(converted_to_categorical)}")
     
     # CRITICAL: Fill ALL remaining NaN values to ensure SMOTE compatibility
     # This is important - SMOTE cannot handle NaN values
@@ -158,6 +361,10 @@ def preprocess_sixth_view_data(df: pd.DataFrame,
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
     for col in categorical_cols:
         if df[col].isna().sum() > 0:
+            # CRITICAL: For categorical columns, add 'missing' category first before fillna
+            if pd.api.types.is_categorical_dtype(df[col]):
+                if 'missing' not in df[col].cat.categories:
+                    df[col] = df[col].cat.add_categories(['missing'])
             df[col] = df[col].fillna('missing')
     
     # Verify no NaN values remain

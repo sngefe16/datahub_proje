@@ -1,7 +1,4 @@
-"""
-Machine learning models for fourth view fraud detection.
-Uses LightGBM with Optuna/Hyperopt hyperparameter tuning and ensemble methods.
-"""
+"""LightGBM models with hyperparameter tuning and ensemble methods."""
 
 import numpy as np
 import pandas as pd

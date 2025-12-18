@@ -1,9 +1,4 @@
-"""
-Data loader for second view model.
-Loads transaction + identity data with enhanced features:
-- First view features: card1, card2, addr1, TransactionAmt, TransactionDT, ProductCD, email_domain
-- New features: DeviceType, DeviceInfo, id_28, id_29, id_30, id_31
-"""
+"""Data loader: adds DeviceType, DeviceInfo, id_28-id_31 to first view features."""
 
 import pandas as pd
 import numpy as np

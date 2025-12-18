@@ -1,8 +1,4 @@
-"""
-Evaluation utilities for fifth view model.
-Extends fourth view with cross-validation metrics.
-Includes threshold optimization for recall >= 0.9 with maximum precision.
-"""
+"""Evaluation utilities: cross-validation, threshold optimization."""
 
 import numpy as np
 import pandas as pd

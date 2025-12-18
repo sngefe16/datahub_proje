@@ -1,7 +1,4 @@
-"""
-Preprocessing utilities for fifth view model.
-Extends fourth view with SMOTE for class imbalance handling.
-"""
+"""Preprocessing: adds SMOTE for class imbalance."""
 
 import pandas as pd
 import numpy as np
@@ -226,4 +223,8 @@ def apply_smote(X: pd.DataFrame,
             print(f"Error applying SMOTE: {e}")
             print("Returning original data without resampling.")
         return X, y
+
+
+
+
 

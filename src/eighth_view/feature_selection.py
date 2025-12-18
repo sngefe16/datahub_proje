@@ -1,6 +1,5 @@
 """
-Feature selection utilities for fourth view model.
-Removes unnecessary features to improve model performance and reduce overfitting.
+Feature selection: removes leakage, low variance, high correlation, selects by importance.
 """
 
 import pandas as pd
@@ -15,11 +14,119 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
+def remove_leakage_features(X: pd.DataFrame, verbose: bool = True) -> tuple:
+    """
+    Removes leakage features: fraud_rate, time_since_last, future velocity, expanding windows.
+    Keeps past-based rolling/statistical features.
+    
+    Args:
+        X: Feature dataframe.
+        verbose: Print removed features.
+    
+    Returns:
+        (X_safe, removed_features)
+    """
+    X_safe = X.copy()
+    removed_features = []
+    
+    # Pattern 1: Target leakage features (fraud_rate)
+    # These directly encode the target variable and cause severe overfitting
+    fraud_rate_features = [col for col in X_safe.columns if col.endswith('_fraud_rate')]
+    removed_features.extend(fraud_rate_features)
+    
+    # ✅ Pattern 2: Sadece gerçek time-based leakage (geleceğe bakan)
+    # CRITICAL FIX: Geçmişe dayalı rolling/statistical features KALMALI
+    # Sadece geleceğe bakan features kaldırılmalı
+    time_leakage_patterns = [
+        'time_since_last',  # ✅ KALDIR - geleceğe bakıyor
+        'hours_since_last',  # ✅ KALDIR - geleceğe bakıyor
+        'days_since_last',  # ✅ KALDIR - geleceğe bakıyor (yanlış direction)
+        'time_between_last_two',  # ✅ KALDIR - geleceğe bakıyor
+        'time_since_second_last',  # ✅ KALDIR - geleceğe bakıyor
+    ]
+    for pattern in time_leakage_patterns:
+        matching_features = [col for col in X_safe.columns if pattern in col.lower()]
+        removed_features.extend(matching_features)
+    
+    # ✅ Pattern 2.5: Velocity features - sadece geleceğe bakan velocity'ler
+    # NOT: Geçmişe dayalı velocity (örn: card1_amt_velocity_last_24h) KALMALI
+    velocity_features = [col for col in X_safe.columns if '_velocity' in col.lower()]
+    for feat in velocity_features:
+        # Sadece geleceğe bakan velocity'leri kaldır (örn: uid_1_velocity - geleceğe bakıyor)
+        # Geçmişe dayalı velocity'leri KAL (örn: card1_amt_velocity_last_24h - geçmişe bakıyor)
+        if 'last_' not in feat.lower() and 'rolling' not in feat.lower():
+            removed_features.append(feat)
+    
+    # ✅ Pattern 3: Expanding window features - sadece geleceğe bakan expanding
+    # CRITICAL FIX: Expanding max/min/mean KALDIR (geleceğe bakıyor)
+    # Expanding features that look forward
+    expanding_leakage_patterns = [
+        'expanding_max',
+        'expanding_min',
+        'expanding_mean',
+        'expanding_std',
+        'expanding_sum',
+    ]
+    for pattern in expanding_leakage_patterns:
+        matching_features = [col for col in X_safe.columns if pattern in col.lower()]
+        removed_features.extend(matching_features)
+    
+    # ✅ Pattern 4: Rolling features - sadece geleceğe bakan rolling
+    # CRITICAL FIX: Geçmişe dayalı rolling features (last_Nh, last_Nd) KALMALI
+    # Sadece geleceğe bakan rolling features kaldırılmalı
+    # NOT: card1_amt_rolling_mean_20 gibi features - eğer shift(1) kullanıyorsa KALMALI
+    # Ancak güvenlik için, "last_" içermeyen rolling features'ları kaldır
+    rolling_leakage_patterns = [
+        '_rolling_mean_',  # Sadece "last_" içermeyenler
+        '_rolling_std_',
+        '_rolling_min_',
+        '_rolling_max_',
+        '_rolling_sum_',
+    ]
+    for pattern in rolling_leakage_patterns:
+        matching_features = [col for col in X_safe.columns if pattern in col.lower()]
+        for feat in matching_features:
+            # "last_" içeren rolling features KAL (geçmişe bakıyor, safe)
+            # "last_" içermeyen rolling features KALDIR (geleceğe bakıyor olabilir)
+            if 'last_' not in feat.lower():
+                removed_features.append(feat)
+    
+    # Pattern 5: High-cardinality combination features that may overfit
+    # These create very specific patterns that may not generalize
+    # We'll be conservative and keep them, but note them for monitoring
+    high_card_combo_patterns = [
+        '_combo_count',  # Multi-column combinations
+    ]
+    # Keep combo_count features but note them (they're useful but need monitoring)
+    
+    # Remove duplicates
+    removed_features = list(set(removed_features))
+    
+    # Remove features that don't exist (safety check)
+    removed_features = [f for f in removed_features if f in X_safe.columns]
+    
+    # Remove the features
+    if removed_features:
+        X_safe = X_safe.drop(columns=removed_features, errors='ignore')
+        if verbose:
+            print(f"  Removed {len(removed_features)} leakage-prone features:")
+            for feat in sorted(removed_features)[:20]:  # Show first 20
+                print(f"    - {feat}")
+            if len(removed_features) > 20:
+                print(f"    ... and {len(removed_features) - 20} more")
+    
+    return X_safe, removed_features
+
+
 def remove_low_variance_features(X: pd.DataFrame, 
                                  threshold: float = 0.01,
                                  verbose: bool = True) -> tuple:
     """
     Remove features with low variance.
+    
+    Why this reduces overfitting:
+    - Features with no variance provide no information
+    - Low variance features are likely noise and contribute to overfitting
     
     Parameters
     ----------
@@ -90,6 +197,11 @@ def remove_correlated_features(X: pd.DataFrame,
     """
     Remove highly correlated features.
     
+    Why this reduces overfitting:
+    - Highly correlated features provide redundant information
+    - Redundancy increases model complexity without adding signal
+    - Removing one of a correlated pair reduces overfitting risk
+    
     Parameters
     ----------
     X : pd.DataFrame
@@ -106,57 +218,86 @@ def remove_correlated_features(X: pd.DataFrame,
     selected_features : list
         List of selected feature names
     """
-    # Select only numeric columns
+    # Separate numeric and non-numeric features
     numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
-    X_numeric = X[numeric_cols].copy()
+    non_numeric_cols = [col for col in X.columns if col not in numeric_cols]
     
-    # Calculate correlation matrix
+    if len(numeric_cols) == 0:
+        return X, list(X.columns)
+    
+    # Calculate correlation matrix for numeric features only
+    X_numeric = X[numeric_cols]
     corr_matrix = X_numeric.corr().abs()
     
-    # Find pairs of highly correlated features
+    # Find highly correlated pairs
     upper_triangle = corr_matrix.where(
         np.triu(np.ones(corr_matrix.shape), k=1).astype(bool)
     )
     
-    # Find features to remove
-    to_remove = [column for column in upper_triangle.columns 
-                if any(upper_triangle[column] > threshold)]
+    # Find features to remove (one from each highly correlated pair)
+    to_remove = [column for column in upper_triangle.columns if any(upper_triangle[column] > threshold)]
     
-    # Keep non-numeric columns
-    non_numeric_cols = [col for col in X.columns if col not in numeric_cols]
-    
-    # Remove correlated features
-    selected_numeric = [col for col in numeric_cols if col not in to_remove]
+    # Keep non-numeric features and non-correlated numeric features
+    selected_numeric = [f for f in numeric_cols if f not in to_remove]
     selected_features = non_numeric_cols + selected_numeric
+    
+    # Create selected dataframe
+    if len(non_numeric_cols) > 0:
+        X_non_numeric = X[non_numeric_cols]
+        if len(selected_numeric) > 0:
+            X_selected = pd.concat([X[selected_numeric], X_non_numeric], axis=1)
+        else:
+            X_selected = X_non_numeric
+    else:
+        X_selected = X[selected_numeric]
+    
+    # Reorder columns
+    X_selected = X_selected[selected_features]
     
     if verbose:
         print(f"Removed {len(to_remove)} highly correlated features")
-        print(f"Remaining features: {len(selected_features)}")
+        print(f"Remaining features: {len(selected_features)} ({len(non_numeric_cols)} categorical, {len(selected_numeric)} numeric)")
     
-    return X[selected_features], selected_features
+    return X_selected, selected_features
 
 
 def select_features_by_importance(X: pd.DataFrame,
                                   y: pd.Series,
                                   model: Optional[lgb.Booster] = None,
-                                  top_k: Optional[int] = None,
-                                  importance_threshold: Optional[float] = None,
+                                  threshold: float = 0.001,
+                                  target_count: Optional[int] = None,
+                                  n_estimators: int = 100,
+                                  early_stopping_rounds: int = 10,
                                   verbose: bool = True) -> tuple:
     """
-    Select features based on LightGBM feature importance.
+    Select features based on LightGBM importance.
+    
+    Why this reduces overfitting:
+    - Removes features that don't contribute to prediction
+    - Focuses model on most informative features
+    - Reduces model complexity
+    
+    Impact on recall vs precision:
+    - May slightly reduce recall if important features are removed
+    - Improves precision by removing noise features
+    - Better generalization overall
     
     Parameters
     ----------
     X : pd.DataFrame
         Feature dataframe
     y : pd.Series
-        Target series
-    model : lgb.Booster, optional
-        Trained LightGBM model. If None, will train a simple model
-    top_k : int, optional
-        Select top K features
-    importance_threshold : float, optional
-        Select features with importance > threshold
+        Target variable
+    model : Optional[lgb.Booster]
+        Pre-trained model (if None, will train a new one)
+    threshold : float
+        Importance threshold (features with importance < threshold will be removed)
+    target_count : Optional[int]
+        Target number of features (if set, will select top N features)
+    n_estimators : int
+        Number of estimators for feature selection model
+    early_stopping_rounds : int
+        Early stopping rounds for feature selection model
     verbose : bool
         Whether to print information
         
@@ -167,27 +308,27 @@ def select_features_by_importance(X: pd.DataFrame,
     selected_features : list
         List of selected feature names
     """
-    if model is None:
-        # Prepare X for LightGBM - convert object/category columns
-        X_prepared = X.copy()
-        categorical_features_list = []
-        
-        for col in X_prepared.columns:
-            if X_prepared[col].dtype == 'object' or X_prepared[col].dtype.name == 'category':
+    # Prepare X for LightGBM - convert object/category columns
+    X_prepared = X.copy()
+    categorical_features_list = []
+    
+    for col in X_prepared.columns:
+        if X_prepared[col].dtype == 'object' or X_prepared[col].dtype.name == 'category':
+            X_prepared[col] = X_prepared[col].astype('category')
+            categorical_features_list.append(col)
+        elif X_prepared[col].dtype in ['int8', 'int16', 'int32', 'int64']:
+            if X_prepared[col].nunique() < 50:
                 X_prepared[col] = X_prepared[col].astype('category')
                 categorical_features_list.append(col)
-            elif X_prepared[col].dtype in ['int8', 'int16', 'int32', 'int64']:
-                if X_prepared[col].nunique() < 50:
-                    X_prepared[col] = X_prepared[col].astype('category')
-                    categorical_features_list.append(col)
-        
-        # Get categorical feature indices
-        if categorical_features_list:
-            cat_indices = [X_prepared.columns.get_loc(cat) for cat in categorical_features_list]
-        else:
-            cat_indices = None
-        
-        # Train a simple model for feature importance (faster for feature selection)
+    
+    # Get categorical feature indices
+    if categorical_features_list:
+        cat_indices = [X_prepared.columns.get_loc(cat) for cat in categorical_features_list]
+    else:
+        cat_indices = None
+    
+    # Train model if not provided
+    if model is None:
         train_data = lgb.Dataset(X_prepared, label=y, categorical_feature=cat_indices)
         params = {
             'objective': 'binary',
@@ -301,119 +442,82 @@ def select_features_by_importance(X: pd.DataFrame,
                 index=X.columns
             ).sort_values(ascending=False)
         else:
-            # Use importance from model, filtered to available features
+            # Use model importance, but only for features in X
             importance = model_importance_series[available_features].sort_values(ascending=False)
     
-    # Select features
-    if top_k is not None:
-        selected_features = importance.head(top_k).index.tolist()
-    elif importance_threshold is not None:
-        max_importance = importance.max()
-        threshold_value = max_importance * importance_threshold
-        selected_features = importance[importance >= threshold_value].index.tolist()
+    # Select features based on threshold or target count
+    if target_count is not None:
+        # Select top N features
+        selected_features = importance.head(target_count).index.tolist()
+        if verbose:
+            print(f"Selected top {target_count} features based on importance")
     else:
-        # Default: select top 80% of features
-        top_pct = int(len(importance) * 0.8)
-        selected_features = importance.head(top_pct).index.tolist()
+        # Select features above threshold
+        selected_features = importance[importance >= threshold].index.tolist()
+        if verbose:
+            print(f"Selected {len(selected_features)} features based on importance (threshold={threshold})")
+    
+    # Ensure we have at least some features
+    if len(selected_features) == 0:
+        if verbose:
+            print("Warning: No features selected. Keeping top 20 features.")
+        selected_features = importance.head(20).index.tolist()
+    
+    # Select features
+    X_selected = X[selected_features]
     
     if verbose:
-        print(f"Selected {len(selected_features)} features based on importance")
         print(f"Top 10 features: {selected_features[:10]}")
     
-    return X[selected_features], selected_features
-
-
-def select_features_statistical(X: pd.DataFrame,
-                               y: pd.Series,
-                               k: int = 100,
-                               score_func: str = 'f_classif',
-                               verbose: bool = True) -> tuple:
-    """
-    Select features using statistical tests (SelectKBest).
-    
-    Parameters
-    ----------
-    X : pd.DataFrame
-        Feature dataframe
-    y : pd.Series
-        Target series
-    k : int
-        Number of top features to select
-    score_func : str
-        'f_classif' or 'mutual_info'
-    verbose : bool
-        Whether to print information
-        
-    Returns
-    -------
-    X_selected : pd.DataFrame
-        DataFrame with selected features
-    selected_features : list
-        List of selected feature names
-    """
-    # Select only numeric columns for statistical tests
-    numeric_cols = X.select_dtypes(include=[np.number]).columns.tolist()
-    X_numeric = X[numeric_cols].copy()
-    
-    # Choose score function
-    if score_func == 'f_classif':
-        score_func_obj = f_classif
-    elif score_func == 'mutual_info':
-        score_func_obj = mutual_info_classif
-    else:
-        raise ValueError(f"Unknown score_func: {score_func}")
-    
-    # Select K best features
-    k_actual = min(k, len(numeric_cols))
-    selector = SelectKBest(score_func=score_func_obj, k=k_actual)
-    X_selected_numeric = selector.fit_transform(X_numeric, y)
-    
-    selected_numeric = X_numeric.columns[selector.get_support()].tolist()
-    
-    # Keep non-numeric columns (categorical features)
-    non_numeric_cols = [col for col in X.columns if col not in numeric_cols]
-    selected_features = non_numeric_cols + selected_numeric
-    
-    if verbose:
-        print(f"Selected {len(selected_features)} features using {score_func}")
-        print(f"  - Numeric: {len(selected_numeric)}")
-        print(f"  - Categorical: {len(non_numeric_cols)}")
-    
-    return X[selected_features], selected_features
+    return X_selected, selected_features
 
 
 def comprehensive_feature_selection(X: pd.DataFrame,
                                    y: pd.Series,
-                                   model: Optional[lgb.Booster] = None,
                                    variance_threshold: float = 0.01,
                                    correlation_threshold: float = 0.95,
-                                   importance_top_k: Optional[int] = None,
-                                   importance_threshold: float = 0.005,  # Reduced from 0.01 to select more features (30-40 instead of 21)
+                                   importance_threshold: float = 0.001,
+                                   target_feature_count: Optional[int] = None,
+                                   remove_leakage_features: bool = True,
+                                   model_params_config: Optional[dict] = None,
                                    verbose: bool = True) -> tuple:
     """
     Comprehensive feature selection pipeline.
     
-    Steps:
-    1. Remove low variance features
-    2. Remove highly correlated features
-    3. Select features by importance
+    PRODUCTION-SAFE: This function applies multiple feature selection steps:
+    1. Remove leakage features (time-based, target leakage)
+    2. Remove low variance features
+    3. Remove highly correlated features
+    4. Select features by importance
+    
+    Why this reduces overfitting:
+    - Removes features that leak future/target information
+    - Reduces model complexity by removing redundant/noisy features
+    - Focuses model on most informative features
+    
+    Impact on recall vs precision:
+    - May slightly reduce recall (fewer features)
+    - Significantly improves precision (no leakage, less noise)
+    - Better generalization (model learns real patterns)
     
     Parameters
     ----------
     X : pd.DataFrame
         Feature dataframe
     y : pd.Series
-        Target series
-    model : lgb.Booster, optional
-        Trained LightGBM model
+        Target variable
     variance_threshold : float
-        Variance threshold for step 1
+        Variance threshold for low variance removal
     correlation_threshold : float
-        Correlation threshold for step 2
-    importance_top_k : int, optional
-        Top K features to select in step 3
+        Correlation threshold for correlated feature removal
     importance_threshold : float
-        Importance threshold (relative to max) for step 3
+        Importance threshold for importance-based selection
+    target_feature_count : Optional[int]
+        Target number of features (if set, will select top N)
+    remove_leakage_features : bool
+        Whether to remove leakage-prone features
+    model_params_config : Optional[dict]
+        Model parameters configuration (for dynamic thresholds)
     verbose : bool
         Whether to print information
         
@@ -428,36 +532,73 @@ def comprehensive_feature_selection(X: pd.DataFrame,
         print("=" * 70)
         print("Comprehensive Feature Selection")
         print("=" * 70)
-        print(f"Initial features: {X.shape[1]}")
+        print(f"Initial features: {len(X.columns)}")
+    
+    X_selected = X.copy()
+    
+    # Step 0: Remove leakage features (CRITICAL for production safety)
+    # Note: Parameter name 'remove_leakage_features' (bool) conflicts with function name
+    # Solution: Store function reference at module level before parameter shadows it
+    # The function reference is stored above, now use the parameter value
+    should_remove_leakage = remove_leakage_features  # This is the bool parameter
+    if should_remove_leakage:
+        if verbose:
+            print("\n[Step 0] Removing leakage features (target leakage prevention)...")
+        # Call the function using the stored reference (avoids name collision)
+        # We need to get the function from the module namespace
+        import sys
+        current_module = sys.modules[__name__]
+        remove_leakage_func = getattr(current_module, 'remove_leakage_features')
+        X_selected, removed_leakage = remove_leakage_func(X_selected, verbose=verbose)
+        if verbose:
+            print(f"  Removed {len(removed_leakage)} leakage features")
+            print(f"  Remaining features: {len(X_selected.columns)}")
     
     # Step 1: Remove low variance features
     if verbose:
         print("\n[Step 1] Removing low variance features...")
-    X_step1, features_step1 = remove_low_variance_features(
-        X, threshold=variance_threshold, verbose=verbose
+    X_selected, _ = remove_low_variance_features(
+        X_selected, 
+        threshold=variance_threshold,
+        verbose=verbose
     )
+    if verbose:
+        print(f"Remaining features: {len(X_selected.columns)}")
     
     # Step 2: Remove highly correlated features
     if verbose:
         print("\n[Step 2] Removing highly correlated features...")
-    X_step2, features_step2 = remove_correlated_features(
-        X_step1, threshold=correlation_threshold, verbose=verbose
+    X_selected, _ = remove_correlated_features(
+        X_selected,
+        threshold=correlation_threshold,
+        verbose=verbose
     )
+    if verbose:
+        print(f"Remaining features: {len(X_selected.columns)}")
     
-    # Step 3: Select by importance
+    # Step 3: Select features by importance
     if verbose:
         print("\n[Step 3] Selecting features by importance...")
-    X_final, features_final = select_features_by_importance(
-        X_step2, y, model=model,
-        top_k=importance_top_k,
-        importance_threshold=importance_threshold,
+    
+    # Adjust thresholds based on model_params_config if provided
+    if model_params_config:
+        importance_threshold = model_params_config.get('feature_selection_importance_threshold', importance_threshold)
+        if target_feature_count is None:
+            target_feature_count = model_params_config.get('feature_selection_target_count', None)
+    
+    X_selected, selected_features = select_features_by_importance(
+        X_selected,
+        y,
+        threshold=importance_threshold,
+        target_count=target_feature_count,
         verbose=verbose
     )
     
     if verbose:
-        print("\n" + "=" * 70)
-        print(f"Final features: {X_final.shape[1]} ({100 * X_final.shape[1] / X.shape[1]:.1f}% of original)")
+        print(f"\n{'=' * 70}")
+        print(f"Final features: {len(selected_features)} ({len(selected_features)/len(X.columns)*100:.1f}% of original)")
+        if should_remove_leakage:
+            print("⚠️  Note: Leakage features (fraud_rate, time_since_last, velocity) were removed to prevent unrealistic performance")
         print("=" * 70)
     
-    return X_final, features_final
-
+    return X_selected, selected_features

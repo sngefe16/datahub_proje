@@ -1,7 +1,4 @@
-"""
-Machine learning models for third view fraud detection.
-Uses LightGBM with Optuna/Hyperopt hyperparameter tuning.
-"""
+"""LightGBM models with Optuna/Hyperopt hyperparameter tuning."""
 
 import numpy as np
 import pandas as pd

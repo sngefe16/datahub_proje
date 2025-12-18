@@ -1,7 +1,4 @@
-"""
-Evaluation utilities for second view model.
-Includes threshold-based evaluation for better precision-recall balance.
-"""
+"""Evaluation utilities: metrics, threshold-based evaluation."""
 
 import numpy as np
 import pandas as pd
@@ -24,25 +21,17 @@ def evaluate_model(y_true: np.ndarray,
                    threshold: float = 0.65,
                    verbose: bool = True) -> dict:
     """
-    Evaluate model performance with multiple metrics.
+    Evaluates model performance.
     
-    Parameters
-    ----------
-    y_true : np.ndarray
-        True labels
-    y_pred : np.ndarray
-        Predicted labels (using threshold)
-    y_pred_proba : np.ndarray, optional
-        Predicted probabilities
-    threshold : float
-        Threshold used for predictions
-    verbose : bool
-        Whether to print results
-        
-    Returns
-    -------
-    metrics : dict
-        Dictionary of evaluation metrics
+    Args:
+        y_true: True labels.
+        y_pred: Predicted labels.
+        y_pred_proba: Predicted probabilities.
+        threshold: Classification threshold.
+        verbose: Print results.
+    
+    Returns:
+        Dict of metrics.
     """
     metrics = {}
     metrics['threshold'] = threshold
@@ -246,4 +235,8 @@ def plot_precision_recall_curve(y_true: np.ndarray,
         plt.savefig(save_path, dpi=300, bbox_inches='tight')
     
     plt.show()
+
+
+
+
 

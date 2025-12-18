@@ -1,7 +1,4 @@
-"""
-Data loader for first view model.
-Loads only selected features: card1, card2, addr1, TransactionAmt, TransactionDT, ProductCD, email_domain
-"""
+"""Data loader: loads card1, card2, addr1, TransactionAmt, TransactionDT, ProductCD, email_domain."""
 
 import pandas as pd
 import numpy as np
@@ -28,31 +25,14 @@ except (ImportError, ValueError):
 def load_first_view_data(data_dir: Optional[str] = None, 
                          sample_size: Optional[int] = None) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
-    Load training and test data with only selected features.
+    Loads transaction data with selected features.
     
-    Selected features:
-    - card1: Primary card identifier
-    - card2: Secondary card identifier
-    - addr1: Address identifier
-    - TransactionAmt: Transaction amount
-    - TransactionDT: Transaction datetime (seconds)
-    - ProductCD: Product code
-    - P_emaildomain: Purchaser email domain
-    - R_emaildomain: Recipient email domain
+    Args:
+        data_dir: Data directory path.
+        sample_size: Optional sample size for faster development.
     
-    Parameters
-    ----------
-    data_dir : str, optional
-        Directory containing the data files
-    sample_size : int, optional
-        If provided, sample this many rows for faster development
-        
-    Returns
-    -------
-    train_df : pd.DataFrame
-        Training data with selected features and target
-    test_df : pd.DataFrame
-        Test data with selected features
+    Returns:
+        (train_df, test_df) with isFraud target in train_df.
     """
     # Use default data directory if not specified
     if data_dir is None:
@@ -133,5 +113,9 @@ if __name__ == "__main__":
     feature_info = get_feature_info(train_df)
     for feat, info in feature_info.items():
         print(f"{feat}: {info}")
+
+
+
+
 
 

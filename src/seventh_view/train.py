@@ -1,12 +1,4 @@
-"""
-Training script for seventh view model.
-Targets AUC-ROC > 0.95, Recall > 0.9, and Precision > 0.5.
-Based on sixth view improvements from MODEL_COMPARISON2.md:
-- Overfitting control: increased regularization, reduced max_depth/num_leaves, aggressive early stopping
-- Feature selection optimization: lower importance threshold (30-40 features instead of 21)
-- Recall improvement: increased SMOTE sampling_strategy (%12-15 instead of %9.09)
-- Better threshold optimization
-"""
+"""Seventh view training pipeline: overfitting control, optimized feature selection, improved SMOTE."""
 
 import pandas as pd
 import numpy as np
@@ -142,13 +134,17 @@ def main(threshold: float = 0.65,
     print(f"Validation set: {X_val.shape}")
     print(f"Fraud rate - Train: {y_train_split.mean():.4f}, Val: {y_val.mean():.4f}")
     
-    # Identify categorical features
+    # Identify categorical features (including float64 categorical features like C1-C14)
     categorical_features = []
     for col in feature_cols:
         if X_train_split[col].dtype == 'object' or X_train_split[col].dtype.name == 'category':
             categorical_features.append(col)
-        elif X_train_split[col].dtype in ['int8', 'int16', 'int32', 'int64']:
-            if X_train_split[col].nunique() < 50:
+        elif X_train_split[col].dtype in ['int8', 'int16', 'int32', 'int64', 'float64']:
+            # C1-C14 are categorical (encoded card features)
+            if col.startswith('C') and col[1:].isdigit():  # C1-C14
+                categorical_features.append(col)
+            # Low cardinality integer/float features are also categorical
+            elif X_train_split[col].nunique() < 500:  # Düşük cardinality → Categorical
                 categorical_features.append(col)
     
     print(f"Categorical features: {len(categorical_features)}")

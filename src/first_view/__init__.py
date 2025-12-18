@@ -1,6 +1,4 @@
-"""
-First view model package for fraud detection.
-"""
+"""First view: basic fraud detection model."""
 
 from .data_loader import load_first_view_data
 from .preprocessing import preprocess_first_view_data
@@ -18,5 +16,9 @@ __all__ = [
     'plot_feature_importance',
     'plot_roc_curve'
 ]
+
+
+
+
 
 

@@ -1,7 +1,4 @@
-"""
-Feature selection utilities for fourth view model.
-Removes unnecessary features to improve model performance and reduce overfitting.
-"""
+"""Feature selection: same as fourth view."""
 
 import pandas as pd
 import numpy as np

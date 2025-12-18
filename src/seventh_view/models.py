@@ -1,10 +1,4 @@
-"""
-Machine learning models for seventh view fraud detection.
-Targets AUC-ROC > 0.95, Recall > 0.9, and Precision > 0.5.
-Uses enhanced LightGBM with overfitting control, optimized feature selection,
-improved SMOTE, and better threshold optimization.
-Based on sixth view improvements and MODEL_COMPARISON2.md recommendations.
-"""
+"""LightGBM models: overfitting control, optimized feature selection, improved SMOTE."""
 
 import numpy as np
 import pandas as pd

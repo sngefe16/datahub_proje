@@ -1,10 +1,4 @@
-"""
-Feature engineering for third view model.
-Extends second view with:
-- More triple/quadruple combinations
-- Statistical features (mean, std, min, max)
-- Lag features (time-based)
-"""
+"""Feature engineering: adds triple/quadruple combinations, statistical, lag features."""
 
 import pandas as pd
 import numpy as np
@@ -15,7 +9,7 @@ from typing import Optional, List
 
 def create_time_features(df: pd.DataFrame, 
                         time_col: str = 'TransactionDT') -> pd.DataFrame:
-    """Create time-based features from TransactionDT."""
+    """Creates time features: day_of_week, hour, day, week, is_weekend, is_night."""
     df = df.copy()
     
     if time_col not in df.columns:
@@ -619,4 +613,8 @@ def create_all_third_view_features(df: pd.DataFrame,
     print(f"Feature engineering complete. Final shape: {df.shape}")
     
     return df
+
+
+
+
 

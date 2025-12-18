@@ -1,5 +1,6 @@
-"""
-Sixth View Model Package
-Enhanced model with all card features, IP/dist features, optimized SMOTE, and improved ensemble.
-"""
+"""Sixth view: all card features (card1-card6), IP/dist, C1-C14, optimized SMOTE."""
+
+
+
+
 

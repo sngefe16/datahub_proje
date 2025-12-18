@@ -1,9 +1,6 @@
 """
-Machine learning models for seventh view fraud detection.
-Targets AUC-ROC > 0.95, Recall > 0.9, and Precision > 0.5.
-Uses enhanced LightGBM with overfitting control, optimized feature selection,
-improved SMOTE, and better threshold optimization.
-Based on sixth view improvements and MODEL_COMPARISON2.md recommendations.
+LightGBM models for fraud detection.
+Targets: AUC-ROC > 0.95, Recall > 0.9, Precision > 0.5.
 """
 
 import numpy as np
@@ -31,11 +28,7 @@ except ImportError:
 
 
 class SeventhViewLightGBM:
-    """
-    LightGBM model optimized for seventh view features.
-    Enhanced with overfitting control, improved regularization, and optimized capacity.
-    Based on sixth view improvements: reduced overfitting, better feature selection, improved SMOTE.
-    """
+    """LightGBM model with overfitting control and optimized regularization."""
     
     def __init__(self, 
                  n_estimators: int = 2000,  # Keep same for 1 hour training
@@ -347,15 +340,16 @@ def optimize_hyperparameters_optuna(X_train, y_train,
             'objective': 'binary',
             'metric': 'auc',
             'boosting_type': 'gbdt',
-            'num_leaves': trial.suggest_int('num_leaves', 200, 220),  # Reduced for overfitting control (was 127-255)
-            'learning_rate': trial.suggest_float('learning_rate', 0.005, 0.05, log=True),
+            # ✅ Optimum hyperparameters for IEEE Fraud Detection
+            'num_leaves': trial.suggest_int('num_leaves', 200, 600),  # ✅ IEEE Fraud için optimum: 200-600
+            'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.05, log=True),  # Minimum 0.01
             'feature_fraction': trial.suggest_float('feature_fraction', 0.6, 1.0),
             'bagging_fraction': trial.suggest_float('bagging_fraction', 0.6, 1.0),
             'bagging_freq': trial.suggest_int('bagging_freq', 1, 7),
-            'min_child_samples': trial.suggest_int('min_child_samples', 10, 100),
-            'max_depth': trial.suggest_int('max_depth', 11, 12),  # Reduced for overfitting control (was 8-14)
-            'reg_alpha': trial.suggest_float('reg_alpha', 0.1, 5.0, log=True),  # Increased min for overfitting control (was 0.01-10.0)
-            'reg_lambda': trial.suggest_float('reg_lambda', 0.1, 5.0, log=True),  # Increased min for overfitting control (was 0.01-10.0)
+            'min_child_samples': trial.suggest_int('min_child_samples', 20, 100),  # ✅ IEEE Fraud için optimum: 20-100
+            'max_depth': trial.suggest_int('max_depth', 10, 12),  # ✅ IEEE Fraud için optimum: 10-12
+            'reg_alpha': trial.suggest_float('reg_alpha', 0.0, 0.3, log=True),  # ✅ IEEE Fraud için optimum: 0.0-0.3
+            'reg_lambda': trial.suggest_float('reg_lambda', 0.0, 0.3, log=True),  # ✅ IEEE Fraud için optimum: 0.0-0.3
             'scale_pos_weight': scale_pos_weight,
             'random_state': 42,
             'verbose': -1
@@ -737,7 +731,62 @@ class EnsembleModel:
             predictions.append(pred)
         
         if self.cat_model is not None and CATBOOST_AVAILABLE:
-            pred = self.cat_model.predict_proba(X)[:, 1]
+            # Process categorical features for CatBoost (EXACTLY same as training - lines 1136-1163)
+            X_cat = X.copy()
+            if hasattr(self.cat_model, 'categorical_features') and self.cat_model.categorical_features:
+                categorical_features = self.cat_model.categorical_features
+                for col in categorical_features:
+                    if col in X_cat.columns:
+                        # EXACTLY same processing as training (lines 1136-1159)
+                        # Step 1: Convert to string first (handles all types: float, int, category, object, NaN)
+                        X_cat[col] = X_cat[col].astype(str)
+                        # Step 2: Replace NaN values
+                        X_cat[col] = X_cat[col].replace(['nan', 'None', 'NaN', '<NA>', 'NaT'], 'missing')
+                        
+                        # Step 3: If values are numeric (float/int), convert to integer string
+                        # This handles cases where float values like 0.0 become "0.0" string, then "0" string
+                        try:
+                            # Try to convert to numeric first
+                            numeric_vals = pd.to_numeric(X_cat[col].replace('missing', '0'), errors='coerce')
+                            if numeric_vals.notna().all():
+                                # All values are numeric, convert to integer string
+                                # This ensures "0.0" -> "0" (not "0.0")
+                                X_cat[col] = numeric_vals.fillna(0).astype(int).astype(str)
+                            else:
+                                # Some values are not numeric, keep as string
+                                pass
+                        except:
+                            # Keep as string if conversion fails
+                            pass
+                
+                cat_features = [X_cat.columns.get_loc(cat) for cat in categorical_features 
+                               if cat in X_cat.columns]
+            else:
+                cat_features = None
+            
+            # CRITICAL: Final pass to ensure NO float strings remain (like "0.0")
+            # Convert any remaining float-like strings to integer strings
+            if cat_features is not None:
+                for idx in cat_features:
+                    col_name = X_cat.columns[idx]
+                    # Convert any "0.0", "1.0", etc. to "0", "1", etc.
+                    def convert_float_str(x):
+                        if isinstance(x, str) and x != 'missing':
+                            try:
+                                # Try to parse as float, then convert to int string
+                                float_val = float(x)
+                                if float_val.is_integer():
+                                    return str(int(float_val))
+                                else:
+                                    return str(int(float_val))  # Still convert to int
+                            except (ValueError, TypeError):
+                                return x
+                        return x
+                    X_cat[col_name] = X_cat[col_name].apply(convert_float_str)
+            
+            # Use Pool for prediction (same as training)
+            cat_data = cb.Pool(X_cat, cat_features=cat_features)
+            pred = self.cat_model.predict_proba(cat_data)[:, 1]
             predictions.append(pred)
         
         if len(predictions) == 0:
@@ -766,7 +815,8 @@ def train_seventh_view_model(X_train, y_train,
                            tuning_method: str = 'optuna',
                            n_trials: int = 50,
                            use_cv_for_tuning: bool = False,
-                           cv_folds: int = 3) -> SeventhViewLightGBM:  # Optimized: reduced from 5 to 3
+                           cv_folds: int = 3,  # Optimized: reduced from 5 to 3
+                           early_stopping_rounds: int = 50) -> SeventhViewLightGBM:  # NEW: Allow custom early stopping
     """
     Train seventh view model with optional hyperparameter tuning.
     Optimized for AUC-ROC > 0.95, Recall > 0.9, and Precision > 0.5.
@@ -882,7 +932,8 @@ def train_seventh_view_model(X_train, y_train,
     
     model.fit(X_train, y_train,
               categorical_features=categorical_features,
-              eval_set=eval_set)
+              eval_set=eval_set,
+              early_stopping_rounds=early_stopping_rounds)  # Use custom early stopping
     
     return model
 
@@ -902,7 +953,9 @@ def train_ensemble_model(X_train, y_train,
                         tuning_method: str = 'optuna',
                         n_trials: int = 50,
                         use_cv_for_weights: bool = True,
-                        cv_folds: int = 3) -> EnsembleModel:  # Optimized: reduced from 5 to 3 for faster CV
+                        cv_folds: int = 3,  # Optimized: reduced from 5 to 3 for faster CV
+                        use_full_data: bool = True,  # NEW: If True, use full dataset params; If False, use small dataset params
+                        model_params_config: Optional[Dict] = None) -> EnsembleModel:  # NEW: Model parameters config from get_model_params_for_data_size
     """
     Train ensemble model with LightGBM, XGBoost, and/or CatBoost.
     
@@ -950,9 +1003,35 @@ def train_ensemble_model(X_train, y_train,
     xgb_model = None
     cat_model = None
     
+    # Use model_params_config if provided, otherwise use defaults
+    if model_params_config is None:
+        # Default parameters (full dataset)
+        model_params_config = {
+            'early_stopping_rounds': 50,
+            'n_estimators_lgb': 2000,
+            'n_estimators_xgb': 2000,
+            'iterations_cat': 2000,
+            'early_stopping_cat': 100,
+            'reg_alpha': 0.5,
+            'reg_lambda': 0.5,
+            'max_depth': 11,
+            'num_leaves': 200,
+            'min_child_samples': 20,
+        }
+    
     # Train LightGBM
     if use_lgb:
         print("Training LightGBM model...")
+        # Update lgb_params with model_params_config if not explicitly provided
+        if lgb_params is None:
+            lgb_params = {}
+        lgb_params.setdefault('n_estimators', model_params_config['n_estimators_lgb'])
+        lgb_params.setdefault('max_depth', model_params_config['max_depth'])
+        lgb_params.setdefault('num_leaves', model_params_config['num_leaves'])
+        lgb_params.setdefault('min_child_samples', model_params_config['min_child_samples'])
+        lgb_params.setdefault('reg_alpha', model_params_config['reg_alpha'])
+        lgb_params.setdefault('reg_lambda', model_params_config['reg_lambda'])
+        
         lgb_model = train_seventh_view_model(
             X_train, y_train,
             X_val=X_val, y_val=y_val,
@@ -963,7 +1042,8 @@ def train_ensemble_model(X_train, y_train,
             tuning_method=tuning_method,
             n_trials=n_trials,
             use_cv_for_tuning=use_cv_for_weights,  # Use CV for tuning if CV is enabled for weights
-            cv_folds=cv_folds
+            cv_folds=cv_folds,
+            early_stopping_rounds=model_params_config['early_stopping_rounds']  # Use data-size-specific early stopping
         )
     
     # Train XGBoost
@@ -973,14 +1053,22 @@ def train_ensemble_model(X_train, y_train,
             xgb_params = {
                 'objective': 'binary:logistic',
                 'eval_metric': 'auc',
-                'max_depth': 7,
+                'max_depth': model_params_config['max_depth'],  # Use data-size-specific
                 'learning_rate': 0.01,
-                'n_estimators': 2000,  # Optimized for 3-4 hour training: reduced from 4000
+                'n_estimators': model_params_config['n_estimators_xgb'],  # Use data-size-specific
                 'subsample': 0.8,
                 'colsample_bytree': 0.8,
                 'random_state': 42,
+                'reg_alpha': model_params_config['reg_alpha'],  # Use data-size-specific
+                'reg_lambda': model_params_config['reg_lambda'],  # Use data-size-specific
                 'scale_pos_weight': (len(y_train) - y_train.sum()) / y_train.sum() if y_train.sum() > 0 else 1.0
             }
+        else:
+            # Update with model_params_config if not explicitly set
+            xgb_params.setdefault('n_estimators', model_params_config['n_estimators_xgb'])
+            xgb_params.setdefault('max_depth', model_params_config['max_depth'])
+            xgb_params.setdefault('reg_alpha', model_params_config['reg_alpha'])
+            xgb_params.setdefault('reg_lambda', model_params_config['reg_lambda'])
         
         # Convert categorical features to integer for XGBoost
         # XGBoost doesn't support categorical dtype directly
@@ -1052,16 +1140,16 @@ def train_ensemble_model(X_train, y_train,
             xgb_model = xgb.train(
                 xgb_params,
                 xgb_train,
-                num_boost_round=xgb_params.get('n_estimators', 2000),  # Optimized for 3-4 hour training
+                num_boost_round=xgb_params.get('n_estimators', model_params_config['n_estimators_xgb']),
                 evals=[(xgb_train, 'train'), (xgb_val, 'val')],
-                early_stopping_rounds=100,
+                early_stopping_rounds=model_params_config['early_stopping_rounds'],  # Use data-size-specific
                 verbose_eval=False
             )
         else:
             xgb_model = xgb.train(
                 xgb_params,
                 xgb_train,
-                num_boost_round=xgb_params.get('n_estimators', 2000),  # Optimized for 3-4 hour training
+                num_boost_round=xgb_params.get('n_estimators', model_params_config['n_estimators_xgb']),
                 verbose_eval=False
             )
         
@@ -1074,15 +1162,21 @@ def train_ensemble_model(X_train, y_train,
         print("Training CatBoost model...")
         if cat_params is None:
             cat_params = {
-                'iterations': 2000,  # Optimized for 3-4 hour training: reduced from 2500
+                'iterations': model_params_config['iterations_cat'],  # Use data-size-specific
                 'learning_rate': 0.01,
-                'depth': 7,
+                'depth': model_params_config['max_depth'],  # Use data-size-specific (depth = max_depth)
                 'loss_function': 'Logloss',
                 'eval_metric': 'AUC',
                 'random_seed': 42,
+                'l2_leaf_reg': model_params_config['reg_lambda'],  # Use data-size-specific (l2_leaf_reg = reg_lambda)
                 'scale_pos_weight': (len(y_train) - y_train.sum()) / y_train.sum() if y_train.sum() > 0 else 1.0,
                 'verbose': False
             }
+        else:
+            # Update with model_params_config if not explicitly set
+            cat_params.setdefault('iterations', model_params_config['iterations_cat'])
+            cat_params.setdefault('depth', model_params_config['max_depth'])
+            cat_params.setdefault('l2_leaf_reg', model_params_config['reg_lambda'])
         
         # Prepare data for CatBoost - ensure categorical features are integer or string
         X_train_cat = X_train.copy()
@@ -1130,7 +1224,7 @@ def train_ensemble_model(X_train, y_train,
         if X_val_cat is not None and y_val is not None:
             cat_val = cb.Pool(X_val_cat, y_val, cat_features=cat_features)
             cat_model = cb.CatBoostClassifier(**cat_params)
-            cat_model.fit(cat_train, eval_set=cat_val, early_stopping_rounds=100, verbose=False)
+            cat_model.fit(cat_train, eval_set=cat_val, early_stopping_rounds=model_params_config['early_stopping_cat'], verbose=False)
         else:
             cat_model = cb.CatBoostClassifier(**cat_params)
             cat_model.fit(cat_train, verbose=False)

@@ -1,10 +1,4 @@
-"""
-Feature engineering for second view model.
-Creates features from: 
-- First view: card1, card2, addr1, TransactionAmt, TransactionDT, ProductCD, email_domain
-- New: DeviceType, DeviceInfo, id_28, id_29, id_30, id_31
-- Advanced interaction features
-"""
+"""Feature engineering: adds DeviceType, DeviceInfo, id_28-id_31, interaction features."""
 
 import pandas as pd
 import numpy as np
@@ -15,7 +9,7 @@ from typing import Optional, List
 
 def create_time_features(df: pd.DataFrame, 
                         time_col: str = 'TransactionDT') -> pd.DataFrame:
-    """Create time-based features from TransactionDT."""
+    """Creates time features: day_of_week, hour, day, week, is_weekend, is_night."""
     df = df.copy()
     
     if time_col not in df.columns:

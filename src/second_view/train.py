@@ -1,8 +1,4 @@
-"""
-Training script for second view model.
-Optimized for PyCharm execution (both script and console).
-Includes threshold tuning (0.6-0.7) for better precision.
-"""
+"""Second view training pipeline with threshold tuning."""
 
 import pandas as pd
 import numpy as np
@@ -222,4 +218,8 @@ def main(threshold: float = 0.65):
 if __name__ == "__main__":
     # Default threshold: 0.65 (between 0.6-0.7 as recommended)
     model, metrics, threshold_results, optimal_threshold = main(threshold=0.65)
+
+
+
+
 

@@ -1,7 +1,4 @@
-"""
-Feature engineering for first view model.
-Creates features from: card1, card2, addr1, TransactionAmt, TransactionDT, ProductCD, email_domain
-"""
+"""Feature engineering: time, amount, card, address, email, product features."""
 
 import pandas as pd
 import numpy as np
@@ -11,27 +8,14 @@ from typing import Optional
 def create_time_features(df: pd.DataFrame, 
                         time_col: str = 'TransactionDT') -> pd.DataFrame:
     """
-    Create time-based features from TransactionDT.
+    Creates time features: day_of_week, hour, day, week, is_weekend, is_night.
     
-    Features created:
-    - day_of_week: Day of week (0=Monday, 6=Sunday)
-    - hour: Hour of day (0-23)
-    - day: Day of month (approximate, 0-29)
-    - week: Week of year (approximate, 0-51)
-    - is_weekend: Is weekend (1) or not (0)
-    - is_night: Is night time 22:00-06:00 (1) or not (0)
+    Args:
+        df: Input dataframe.
+        time_col: Time column name.
     
-    Parameters
-    ----------
-    df : pd.DataFrame
-        Input dataframe
-    time_col : str
-        Name of the time column
-        
-    Returns
-    -------
-    df : pd.DataFrame
-        DataFrame with time features added
+    Returns:
+        DataFrame with time features added.
     """
     df = df.copy()
     
@@ -326,5 +310,9 @@ def create_all_first_view_features(df: pd.DataFrame,
     print(f"Feature engineering complete. Final shape: {df.shape}")
     
     return df
+
+
+
+
 
 

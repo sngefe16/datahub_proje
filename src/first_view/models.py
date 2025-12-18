@@ -1,7 +1,4 @@
-"""
-Machine learning models for first view fraud detection.
-Uses LightGBM as primary model due to its efficiency with categorical features.
-"""
+"""LightGBM models for fraud detection."""
 
 import numpy as np
 import pandas as pd
@@ -13,10 +10,7 @@ warnings.filterwarnings('ignore')
 
 
 class FirstViewLightGBM:
-    """
-    LightGBM model optimized for first view features.
-    Handles categorical features natively and is efficient with high-cardinality features.
-    """
+    """LightGBM model for first view features."""
     
     def __init__(self, 
                  n_estimators: int = 1000,
@@ -32,22 +26,15 @@ class FirstViewLightGBM:
                  random_state: int = 42,
                  **kwargs):
         """
-        Initialize LightGBM model.
+        Initializes LightGBM model.
         
-        Parameters
-        ----------
-        n_estimators : int
-            Number of boosting rounds
-        max_depth : int
-            Maximum tree depth
-        learning_rate : float
-            Learning rate
-        num_leaves : int
-            Number of leaves in one tree
-        min_child_samples : int
-            Minimum number of data needed in a child
-        subsample : float
-            Subsample ratio of the training instance
+        Args:
+            n_estimators: Number of boosting rounds.
+            max_depth: Maximum tree depth.
+            learning_rate: Learning rate.
+            num_leaves: Number of leaves.
+            min_child_samples: Minimum samples in a child.
+            subsample: Subsample ratio.
         colsample_bytree : float
             Subsample ratio of columns when constructing each tree
         reg_alpha : float
