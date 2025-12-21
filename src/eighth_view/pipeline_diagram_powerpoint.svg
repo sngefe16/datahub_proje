@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#ffffff"/>
+  
+  <!-- Title -->
+  <text x="960" y="40" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#0D47A1">
+    Eighth View - Fraud Detection Pipeline
+  </text>
+  <text x="960" y="70" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666" font-style="italic">
+    Ensemble Model with Calibration &amp; Threshold Optimization (Part 1/2)
+  </text>
+  
+  <!-- Legend -->
+  <rect x="50" y="90" width="200" height="80" rx="5" fill="#F5F5F5" stroke="#333" stroke-width="1"/>
+  <text x="60" y="110" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">Legend:</text>
+  <rect x="60" y="120" width="15" height="15" fill="#E3F2FD" stroke="#333"/>
+  <text x="80" y="132" font-family="Arial, sans-serif" font-size="12" fill="#000">Data Processing</text>
+  <rect x="60" y="140" width="15" height="15" fill="#C8E6C9" stroke="#333"/>
+  <text x="80" y="152" font-family="Arial, sans-serif" font-size="12" fill="#000">Feature Engineering</text>
+  <rect x="60" y="160" width="15" height="15" fill="#FFF9C4" stroke="#333"/>
+  <text x="80" y="172" font-family="Arial, sans-serif" font-size="12" fill="#000">Model Training</text>
+  
+  <!-- Column 1: Data Loading & Preprocessing -->
+  <g id="column1">
+    <!-- Step 1: Data Loading -->
+    <rect x="50" y="200" width="280" height="80" rx="8" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+    <text x="190" y="230" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [1/11] Data Loading
+    </text>
+    <text x="190" y="250" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Transaction + Identity Data
+    </text>
+    <text x="190" y="268" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      🟢 DEBUG MODE: 20k sample (3.5% fraud)
+    </text>
+    <path d="M 190 280 L 190 300" stroke="#1976D2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 2: Preprocessing -->
+    <rect x="50" y="300" width="280" height="80" rx="8" fill="#BBDEFB" stroke="#1976D2" stroke-width="2"/>
+    <text x="190" y="330" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [2/11] Preprocessing
+    </text>
+    <text x="190" y="350" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Type Conversion, Missing Values
+    </text>
+    <text x="190" y="368" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Shape: (20000, 70) → (20000, 70)
+    </text>
+    <path d="M 190 380 L 190 400" stroke="#1976D2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 3: Time-aware Split -->
+    <rect x="50" y="400" width="280" height="100" rx="8" fill="#90CAF9" stroke="#1976D2" stroke-width="2"/>
+    <text x="190" y="430" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [3/11] Time-aware Split
+    </text>
+    <text x="190" y="450" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      BEFORE Feature Engineering
+    </text>
+    <text x="190" y="468" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Train: 16k (earlier) | Val: 4k (later)
+    </text>
+    <text x="190" y="486" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      ⚠️ Prevents temporal leakage
+    </text>
+    <path d="M 190 500 L 190 520" stroke="#1976D2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 4: Feature Engineering -->
+    <rect x="50" y="520" width="280" height="140" rx="8" fill="#C8E6C9" stroke="#388E3C" stroke-width="2"/>
+    <text x="190" y="550" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [4/11] Feature Engineering
+    </text>
+    <text x="190" y="570" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      AFTER Split (Leakage Prevention)
+    </text>
+    <text x="190" y="590" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      • Train: Full features (is_train=True)
+    </text>
+    <text x="190" y="608" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      • Val/Test: Using train statistics
+    </text>
+    <text x="190" y="626" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      • Output: 518 features (train), 517 (test)
+    </text>
+    <text x="190" y="644" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Faz 1-4: Rolling, Velocity, UID, Statistical
+    </text>
+    <path d="M 190 660 L 190 680" stroke="#388E3C" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 4.5: Data Exploration -->
+    <rect x="50" y="680" width="280" height="80" rx="8" fill="#A5D6A7" stroke="#388E3C" stroke-width="2"/>
+    <text x="190" y="710" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [4.5/11] Data Exploration
+    </text>
+    <text x="190" y="730" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Missing Data, Correlation, Patterns
+    </text>
+    <text x="190" y="748" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Temporal &amp; Fraud Pattern Analysis
+    </text>
+    <path d="M 190 760 L 190 780" stroke="#388E3C" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 5: Feature Preparation -->
+    <rect x="50" y="780" width="280" height="80" rx="8" fill="#BBDEFB" stroke="#1976D2" stroke-width="2"/>
+    <text x="190" y="810" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [5/11] Feature Preparation
+    </text>
+    <text x="190" y="830" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Feature Alignment
+    </text>
+    <text x="190" y="848" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Align train/val/test: 516 features
+    </text>
+  </g>
+  
+  <!-- Column 2: Feature Selection & Model Training -->
+  <g id="column2">
+    <!-- Step 5 (continued): Feature Selection -->
+    <rect x="400" y="200" width="280" height="140" rx="8" fill="#FFF9C4" stroke="#F57C00" stroke-width="2"/>
+    <text x="540" y="230" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [5/11] Feature Selection
+    </text>
+    <text x="540" y="250" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Comprehensive Selection
+    </text>
+    <text x="540" y="270" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Step 0: Remove leakage (141 features)
+    </text>
+    <text x="540" y="288" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Step 1: Low variance (30 features)
+    </text>
+    <text x="540" y="306" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Step 2: High correlation (127 features)
+    </text>
+    <text x="540" y="324" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Step 3: Importance-based (120 final)
+    </text>
+    <path d="M 540 340 L 540 360" stroke="#F57C00" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 6: Class Weights -->
+    <rect x="400" y="360" width="280" height="80" rx="8" fill="#FFE0B2" stroke="#F57C00" stroke-width="2"/>
+    <text x="540" y="390" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [6/11] Class Weights
+    </text>
+    <text x="540" y="410" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      PRODUCTION-SAFE: No SMOTE
+    </text>
+    <text x="540" y="428" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      scale_pos_weight: 10.48 (capped from 27.47)
+    </text>
+    <path d="M 540 440 L 540 460" stroke="#F57C00" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 7: Ensemble Training -->
+    <rect x="400" y="460" width="280" height="140" rx="8" fill="#FFCCBC" stroke="#F57C00" stroke-width="2"/>
+    <text x="540" y="490" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [7/11] Ensemble Training
+    </text>
+    <text x="540" y="510" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      5 LightGBM Models (Different Seeds)
+    </text>
+    <text x="540" y="530" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Seeds: 42, 123, 456, 789, 999
+    </text>
+    <text x="540" y="548" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Early stopping: 200 rounds
+    </text>
+    <text x="540" y="566" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Val AUC: 0.744, 0.750, 0.726, 0.744, 0.729
+    </text>
+    <text x="540" y="584" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Ensemble weights: [0.20, 0.20, 0.20, 0.20, 0.20]
+    </text>
+    <path d="M 540 600 L 540 620" stroke="#F57C00" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 8: Cross-Validation -->
+    <rect x="400" y="620" width="280" height="80" rx="8" fill="#FFE0B2" stroke="#F57C00" stroke-width="2"/>
+    <text x="540" y="650" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [8/11] Cross-Validation
+    </text>
+    <text x="540" y="670" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Ensemble Weight Calculation
+    </text>
+    <text x="540" y="688" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      CV results used for ensemble weights
+    </text>
+    <path d="M 540 700 L 540 720" stroke="#F57C00" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 9: Model Evaluation -->
+    <rect x="400" y="720" width="280" height="100" rx="8" fill="#FFCCBC" stroke="#F57C00" stroke-width="2"/>
+    <text x="540" y="750" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [9/11] Model Evaluation
+    </text>
+    <text x="540" y="770" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Multiple Thresholds Analysis
+    </text>
+    <text x="540" y="788" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Thresholds: 0.30 - 0.80
+    </text>
+    <text x="540" y="806" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Metrics: AUC-ROC, Precision, Recall, F1
+    </text>
+  </g>
+  
+  <!-- Column 3: Calibration & Threshold Optimization -->
+  <g id="column3">
+    <!-- Step 10: Calibration -->
+    <rect x="750" y="200" width="280" height="100" rx="8" fill="#E1BEE7" stroke="#7B1FA2" stroke-width="2"/>
+    <text x="890" y="230" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [10/11] Calibration
+    </text>
+    <text x="890" y="250" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Sigmoid/Platt + Isotonic Fallback
+    </text>
+    <text x="890" y="270" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#FF0000">
+      ⚠️ Calibration Failed
+    </text>
+    <text x="890" y="288" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Using uncalibrated model
+    </text>
+    <path d="M 890 300 L 890 320" stroke="#7B1FA2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 10.5: Threshold Optimization -->
+    <rect x="750" y="320" width="280" height="140" rx="8" fill="#F8BBD0" stroke="#7B1FA2" stroke-width="2"/>
+    <text x="890" y="350" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [10.5/11] Threshold Optimization
+    </text>
+    <text x="890" y="370" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Multi-Objective (Recall ≥ 0.90)
+    </text>
+    <text x="890" y="390" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Strategy 1: Percentile-based
+    </text>
+    <text x="890" y="408" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Optimal: 0.0077
+    </text>
+    <text x="890" y="426" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Recall: 0.9058, Precision: 0.0496
+    </text>
+    <text x="890" y="444" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      ⚠️ Precision constraint not met (0.20)
+    </text>
+    <path d="M 890 460 L 890 480" stroke="#7B1FA2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 10.6: Percentile Sweep -->
+    <rect x="750" y="480" width="280" height="80" rx="8" fill="#F8BBD0" stroke="#7B1FA2" stroke-width="2"/>
+    <text x="890" y="510" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [10.6/13] Percentile Sweep
+    </text>
+    <text x="890" y="530" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      0.5% → 5.0% Range
+    </text>
+    <text x="890" y="548" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#FF0000">
+      ⚠️ No threshold found (recall target: 0.90)
+    </text>
+    <path d="M 890 560 L 890 580" stroke="#7B1FA2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 10.7: Cost-Based Optimization -->
+    <rect x="750" y="580" width="280" height="140" rx="8" fill="#F8BBD0" stroke="#7B1FA2" stroke-width="2"/>
+    <text x="890" y="610" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [10.7/13] Cost-Based Optimization
+    </text>
+    <text x="890" y="630" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      FN/FP Cost Scenarios
+    </text>
+    <text x="890" y="650" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      10x: threshold=0.0248, recall=0.2536
+    </text>
+    <text x="890" y="668" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      20x: threshold=0.0149, recall=0.5000
+    </text>
+    <text x="890" y="686" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      50x: threshold=0.0100, recall=0.7391
+    </text>
+    <text x="890" y="704" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Final: 0.0077 (multi-objective)
+    </text>
+    <path d="M 890 720 L 890 740" stroke="#7B1FA2" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+    
+    <!-- Step 11: Test Predictions -->
+    <rect x="750" y="740" width="280" height="100" rx="8" fill="#C5CAE9" stroke="#303F9F" stroke-width="2"/>
+    <text x="890" y="770" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">
+      [11/11] Test Predictions
+    </text>
+    <text x="890" y="790" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">
+      Feature Alignment &amp; Prediction
+    </text>
+    <text x="890" y="810" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Test set: 20,000 rows
+    </text>
+    <text x="890" y="828" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
+      Mean prob: 0.0091, Max: 0.0623
+    </text>
+  </g>
+  
+  <!-- Final Results Box -->
+  <rect x="1100" y="200" width="800" height="640" rx="10" fill="#F5F5F5" stroke="#333" stroke-width="2"/>
+  <text x="1500" y="240" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#0D47A1">
+    Final Results
+  </text>
+  
+  <!-- Model Info -->
+  <text x="1120" y="280" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000">Model Configuration:</text>
+  <text x="1140" y="305" font-family="Arial, sans-serif" font-size="14" fill="#333">• Ensemble: 5 LightGBM models</text>
+  <text x="1140" y="325" font-family="Arial, sans-serif" font-size="14" fill="#333">• Feature Selection: Yes (120 features)</text>
+  <text x="1140" y="345" font-family="Arial, sans-serif" font-size="14" fill="#333">• SMOTE: No (Class weights: 10.48)</text>
+  <text x="1140" y="365" font-family="Arial, sans-serif" font-size="14" fill="#333">• Calibration: Failed (uncalibrated)</text>
+  <text x="1140" y="385" font-family="Arial, sans-serif" font-size="14" fill="#333">• Hyperparameter Tuning: Optuna (50 trials)</text>
+  
+  <!-- Performance Metrics -->
+  <text x="1120" y="430" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000">Performance Metrics:</text>
+  <text x="1140" y="455" font-family="Arial, sans-serif" font-size="14" fill="#333">• AUC-ROC: 0.7620</text>
+  <text x="1140" y="475" font-family="Arial, sans-serif" font-size="14" fill="#333">• Average Precision: 0.1326</text>
+  <text x="1140" y="495" font-family="Arial, sans-serif" font-size="14" fill="#FF0000">• Precision: 0.0496 ⚠️ (Target: ≥0.40)</text>
+  <text x="1140" y="515" font-family="Arial, sans-serif" font-size="14" fill="#00AA00">• Recall: 0.9058 ✅ (Target: ≥0.90)</text>
+  <text x="1140" y="535" font-family="Arial, sans-serif" font-size="14" fill="#333">• F1-Score: 0.0940</text>
+  
+  <!-- Confusion Matrix -->
+  <text x="1120" y="570" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#000">Confusion Matrix (Threshold: 0.0077):</text>
+  <text x="1140" y="595" font-family="Arial, sans-serif" font-size="14" fill="#333">• True Positives: 125 (3.12%)</text>
+  <text x="1140" y="615" font-family="Arial, sans-serif" font-size="14" fill="#333">• False Positives: 2397 (59.92%)</text>
+  <text x="1140" y="635" font-family="Arial, sans-serif" font-size="14" fill="#333">• False Negatives: 13 (0.33%)</text>
+  <text x="1140" y="655" font-family="Arial, sans-serif" font-size="14" fill="#333">• True Negatives: 1465 (36.62%)</text>
+  
+  <!-- Issues -->
+  <text x="1120" y="690" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#FF0000">⚠️ Issues Identified:</text>
+  <text x="1140" y="715" font-family="Arial, sans-serif" font-size="14" fill="#FF0000">• Poor separation (0.0088 &lt; 0.05)</text>
+  <text x="1140" y="735" font-family="Arial, sans-serif" font-size="14" fill="#FF0000">• Calibration failed</text>
+  <text x="1140" y="755" font-family="Arial, sans-serif" font-size="14" fill="#FF0000">• Precision below target (0.0496 &lt; 0.40)</text>
+  <text x="1140" y="775" font-family="Arial, sans-serif" font-size="14" fill="#FF0000">• 13 features show distribution shift</text>
+  
+  <!-- Arrow marker definition -->
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="3" orient="auto">
+      <polygon points="0 0, 10 3, 0 6" fill="#333"/>
+    </marker>
+  </defs>
+  
+  <!-- Footer -->
+  <text x="960" y="1050" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#666666">
+    Part 1 of 2 - See Part 2 for Monitoring &amp; Additional Steps
+  </text>
+</svg>
+

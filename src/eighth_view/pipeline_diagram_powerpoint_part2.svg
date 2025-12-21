@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1920" height="1080" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1920" height="1080" fill="#ffffff"/>
+  
+  <!-- Title -->
+  <text x="960" y="40" font-family="Arial, sans-serif" font-size="36" font-weight="bold" text-anchor="middle" fill="#0D47A1">
+    Eighth View - Fraud Detection Pipeline
+  </text>
+  <text x="960" y="70" font-family="Arial, sans-serif" font-size="20" text-anchor="middle" fill="#666666" font-style="italic">
+    Monitoring, Feature Engineering Details &amp; Model Components (Part 2/2)
+  </text>
+  
+  <!-- Feature Engineering Details -->
+  <rect x="50" y="100" width="900" height="480" rx="10" fill="#F5F5F5" stroke="#333" stroke-width="2"/>
+  <text x="500" y="135" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#0D47A1">
+    Feature Engineering Pipeline (Faz 1-4)
+  </text>
+  
+  <!-- Faz 1 -->
+  <rect x="80" y="160" width="200" height="100" rx="5" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+  <text x="180" y="185" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 1</text>
+  <text x="180" y="205" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Rolling Windows</text>
+  <text x="180" y="225" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• card1_amt_rolling_*</text>
+  <text x="180" y="240" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• Time-windowed counts</text>
+  <text x="180" y="255" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• Q25, Q75, Q50 aggregations</text>
+  
+  <!-- Faz 2 -->
+  <rect x="300" y="160" width="200" height="100" rx="5" fill="#C8E6C9" stroke="#388E3C" stroke-width="2"/>
+  <text x="400" y="185" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 2</text>
+  <text x="400" y="205" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Velocity Features</text>
+  <text x="400" y="225" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• card1_amt_velocity</text>
+  <text x="400" y="240" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• card1_amt_acceleration</text>
+  <text x="400" y="255" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• card1_amt_jerk</text>
+  
+  <!-- Faz 3 -->
+  <rect x="520" y="160" width="200" height="100" rx="5" fill="#FFF9C4" stroke="#F57C00" stroke-width="2"/>
+  <text x="620" y="185" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 3</text>
+  <text x="620" y="205" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Time-Decayed &amp; Recency</text>
+  <text x="620" y="225" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• freq_decayed</text>
+  <text x="620" y="240" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• days_since_first</text>
+  <text x="620" y="255" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• Percentile ratios</text>
+  
+  <!-- Faz 4 -->
+  <rect x="740" y="160" width="200" height="100" rx="5" fill="#E1BEE7" stroke="#7B1FA2" stroke-width="2"/>
+  <text x="840" y="185" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 4</text>
+  <text x="840" y="205" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Enhanced Features</text>
+  <text x="840" y="225" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• Fraud-specific</text>
+  <text x="840" y="240" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• Enhanced interactions</text>
+  <text x="840" y="255" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• Statistical &amp; time-based</text>
+  
+  <!-- Feature Categories -->
+  <text x="500" y="290" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">Feature Categories:</text>
+  
+  <rect x="80" y="310" width="400" height="120" rx="5" fill="#E8F5E9" stroke="#4CAF50" stroke-width="1"/>
+  <text x="100" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">Core Features:</text>
+  <text x="120" y="355" font-family="Arial, sans-serif" font-size="12" fill="#333">• Card features (card1-card6): counts, avg_amt, combos</text>
+  <text x="120" y="375" font-family="Arial, sans-serif" font-size="12" fill="#333">• UID features (uid_1 to uid_5): velocity, fraud_rate, counts</text>
+  <text x="120" y="395" font-family="Arial, sans-serif" font-size="12" fill="#333">• Address, Email, Product, Device, Identity features</text>
+  <text x="120" y="415" font-family="Arial, sans-serif" font-size="12" fill="#333">• IP/Distance features (dist1, dist2)</text>
+  
+  <rect x="500" y="310" width="400" height="120" rx="5" fill="#FFF3E0" stroke="#FF9800" stroke-width="1"/>
+  <text x="520" y="335" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">Advanced Features:</text>
+  <text x="540" y="355" font-family="Arial, sans-serif" font-size="12" fill="#333">• Rolling windows: 5, 10, 20, 50 transactions</text>
+  <text x="540" y="375" font-family="Arial, sans-serif" font-size="12" fill="#333">• Time-windowed: 1h, 6h, 24h, 7d, 30d</text>
+  <text x="540" y="395" font-family="Arial, sans-serif" font-size="12" fill="#333">• Statistical: mean, std, min, max, median, CV</text>
+  <text x="540" y="415" font-family="Arial, sans-serif" font-size="12" fill="#333">• Cross-entity anomalies: mismatch rates</text>
+  
+  <!-- Feature Selection Details -->
+  <text x="500" y="460" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">Feature Selection Process:</text>
+  <text x="100" y="485" font-family="Arial, sans-serif" font-size="12" fill="#333">Initial: 516 features → Step 0 (Leakage): 375 → Step 1 (Variance): 345 → Step 2 (Correlation): 218 → Step 3 (Importance): 120 final</text>
+  <text x="100" y="505" font-family="Arial, sans-serif" font-size="12" fill="#333">Top 10 Features: card1, ProductCD_C1_combo_count, days_since_first_transaction_addr1, id_31_amt_mean, card2, C5, C13, card1_C4_combo_count, C14, addr1</text>
+  <text x="100" y="525" font-family="Arial, sans-serif" font-size="12" fill="#FF0000">⚠️ Removed 141 leakage features (fraud_rate, time_since_last, velocity, expanding features)</text>
+  <text x="100" y="545" font-family="Arial, sans-serif" font-size="12" fill="#333">Selected: 52 categorical, 68 numeric features</text>
+  <text x="100" y="565" font-family="Arial, sans-serif" font-size="12" fill="#333">Final feature count: 120 (23.3% of original)</text>
+  
+  <!-- Monitoring Section -->
+  <rect x="1000" y="100" width="870" height="480" rx="10" fill="#F5F5F5" stroke="#333" stroke-width="2"/>
+  <text x="1435" y="135" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#0D47A1">
+    Monitoring &amp; Analysis (Faz 4.1-4.4)
+  </text>
+  
+  <!-- Faz 4.1: Feature Importance -->
+  <rect x="1020" y="160" width="400" height="100" rx="5" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+  <text x="1220" y="185" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 4.1: Feature Importance</text>
+  <text x="1220" y="205" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Top 20 Most Important Features</text>
+  <text x="1220" y="225" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• card1: 36,928</text>
+  <text x="1220" y="240" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• ProductCD_C1_combo_count: 28,620</text>
+  <text x="1220" y="255" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• card2: 26,782</text>
+  
+  <!-- Faz 4.2: Distribution Monitoring -->
+  <rect x="1020" y="280" width="400" height="120" rx="5" fill="#C8E6C9" stroke="#388E3C" stroke-width="2"/>
+  <text x="1220" y="305" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 4.2: Distribution Monitoring</text>
+  <text x="1220" y="325" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">KS Test for Distribution Shifts</text>
+  <text x="1220" y="345" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#FF0000">⚠️ 13 features show significant shift (p &lt; 0.05):</text>
+  <text x="1220" y="365" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• R_emaildomain_amt_cv: KS=0.7915</text>
+  <text x="1220" y="380" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• DeviceType_ProductCD_avg_amt: KS=0.7587</text>
+  <text x="1220" y="395" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">• id_31_amt_mean: KS=0.7493</text>
+  
+  <!-- Faz 4.3: Prediction Distribution -->
+  <rect x="1020" y="420" width="400" height="100" rx="5" fill="#FFF9C4" stroke="#F57C00" stroke-width="2"/>
+  <text x="1220" y="445" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 4.3: Prediction Distribution</text>
+  <text x="1220" y="465" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#333">Fraud vs Normal Separation</text>
+  <text x="1220" y="485" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#FF0000">🔴 Poor separation: 0.0088 (&lt; 0.05)</text>
+  <text x="1220" y="505" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">Fraud mean: 0.0195, Normal mean: 0.0107</text>
+  
+  <!-- Faz 4.4: Confusion Matrix -->
+  <rect x="1450" y="160" width="400" height="360" rx="5" fill="#E1BEE7" stroke="#7B1FA2" stroke-width="2"/>
+  <text x="1650" y="185" font-family="Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" fill="#000">Faz 4.4: Confusion Matrix</text>
+  <text x="1650" y="210" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#333">Threshold: 0.0077</text>
+  
+  <!-- Confusion Matrix Visualization -->
+  <rect x="1500" y="230" width="300" height="200" rx="5" fill="#FFFFFF" stroke="#333" stroke-width="2"/>
+  <!-- TN -->
+  <rect x="1510" y="240" width="140" height="90" rx="3" fill="#C8E6C9" stroke="#333" stroke-width="1"/>
+  <text x="1580" y="270" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">TN</text>
+  <text x="1580" y="290" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#000">1,465</text>
+  <text x="1580" y="310" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">36.62%</text>
+  <!-- FP -->
+  <rect x="1660" y="240" width="140" height="90" rx="3" fill="#FFCDD2" stroke="#333" stroke-width="1"/>
+  <text x="1730" y="270" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">FP</text>
+  <text x="1730" y="290" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#000">2,397</text>
+  <text x="1730" y="310" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">59.92%</text>
+  <!-- FN -->
+  <rect x="1510" y="340" width="140" height="90" rx="3" fill="#FFE0B2" stroke="#333" stroke-width="1"/>
+  <text x="1580" y="370" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">FN</text>
+  <text x="1580" y="390" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#000">13</text>
+  <text x="1580" y="410" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">0.33%</text>
+  <!-- TP -->
+  <rect x="1660" y="340" width="140" height="90" rx="3" fill="#A5D6A7" stroke="#333" stroke-width="1"/>
+  <text x="1730" y="370" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">TP</text>
+  <text x="1730" y="390" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#000">125</text>
+  <text x="1730" y="410" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">3.12%</text>
+  
+  <!-- Metrics -->
+  <text x="1650" y="460" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#000">Metrics:</text>
+  <text x="1500" y="485" font-family="Arial, sans-serif" font-size="12" fill="#333">Precision: 0.0496</text>
+  <text x="1500" y="505" font-family="Arial, sans-serif" font-size="12" fill="#00AA00">Recall: 0.9058 ✅</text>
+  <text x="1700" y="485" font-family="Arial, sans-serif" font-size="12" fill="#333">Specificity: 0.3793</text>
+  <text x="1700" y="505" font-family="Arial, sans-serif" font-size="12" fill="#333">FPR: 0.6207</text>
+  
+  <!-- Model Architecture -->
+  <rect x="50" y="600" width="1820" height="440" rx="10" fill="#F5F5F5" stroke="#333" stroke-width="2"/>
+  <text x="960" y="635" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#0D47A1">
+    Model Architecture &amp; Configuration
+  </text>
+  
+  <!-- Ensemble Details -->
+  <rect x="80" y="660" width="400" height="160" rx="5" fill="#E3F2FD" stroke="#1976D2" stroke-width="2"/>
+  <text x="280" y="685" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">Ensemble Configuration</text>
+  <text x="100" y="710" font-family="Arial, sans-serif" font-size="14" fill="#333">• 5 LightGBM models with different seeds</text>
+  <text x="100" y="730" font-family="Arial, sans-serif" font-size="14" fill="#333">• Seeds: 42, 123, 456, 789, 999</text>
+  <text x="100" y="750" font-family="Arial, sans-serif" font-size="14" fill="#333">• Ensemble weights: [0.20, 0.20, 0.20, 0.20, 0.20]</text>
+  <text x="100" y="770" font-family="Arial, sans-serif" font-size="14" fill="#333">• Early stopping: 200 rounds (min_delta: 0.0)</text>
+  <text x="100" y="790" font-family="Arial, sans-serif" font-size="14" fill="#333">• Max iterations: 2000</text>
+  <text x="100" y="810" font-family="Arial, sans-serif" font-size="14" fill="#333">• Regularization: alpha=0.1, lambda=0.2</text>
+  
+  <!-- Hyperparameters -->
+  <rect x="500" y="660" width="400" height="160" rx="5" fill="#C8E6C9" stroke="#388E3C" stroke-width="2"/>
+  <text x="700" y="685" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">Hyperparameters</text>
+  <text x="520" y="710" font-family="Arial, sans-serif" font-size="14" fill="#333">• Max depth: 10</text>
+  <text x="520" y="730" font-family="Arial, sans-serif" font-size="14" fill="#333">• Num leaves: 200</text>
+  <text x="520" y="750" font-family="Arial, sans-serif" font-size="14" fill="#333">• Learning rate: Optimized by Optuna</text>
+  <text x="520" y="770" font-family="Arial, sans-serif" font-size="14" fill="#333">• Feature fraction: 0.8</text>
+  <text x="520" y="790" font-family="Arial, sans-serif" font-size="14" fill="#333">• Bagging fraction: 0.8, freq: 3</text>
+  <text x="520" y="810" font-family="Arial, sans-serif" font-size="14" fill="#333">• Min child samples: 50</text>
+  
+  <!-- Threshold Optimization -->
+  <rect x="920" y="660" width="400" height="160" rx="5" fill="#FFF9C4" stroke="#F57C00" stroke-width="2"/>
+  <text x="1120" y="685" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">Threshold Optimization</text>
+  <text x="940" y="710" font-family="Arial, sans-serif" font-size="14" fill="#333">• Multi-objective: Recall ≥ 0.90</text>
+  <text x="940" y="730" font-family="Arial, sans-serif" font-size="14" fill="#333">• Percentile-based: 0.0077</text>
+  <text x="940" y="750" font-family="Arial, sans-serif" font-size="14" fill="#333">• Cost-based: 10x, 20x, 50x ratios</text>
+  <text x="940" y="770" font-family="Arial, sans-serif" font-size="14" fill="#333">• Final threshold: 0.0077</text>
+  <text x="940" y="790" font-family="Arial, sans-serif" font-size="14" fill="#FF0000">⚠️ Precision constraint not met (0.20)</text>
+  <text x="940" y="810" font-family="Arial, sans-serif" font-size="14" fill="#333">• Percentile sweep: 0.5% → 5.0% (no threshold found)</text>
+  
+  <!-- Data Configuration -->
+  <rect x="1340" y="660" width="500" height="160" rx="5" fill="#E1BEE7" stroke="#7B1FA2" stroke-width="2"/>
+  <text x="1590" y="685" font-family="Arial, sans-serif" font-size="18" font-weight="bold" text-anchor="middle" fill="#000">Data Configuration</text>
+  <text x="1360" y="710" font-family="Arial, sans-serif" font-size="14" fill="#333">• Mode: DEBUG (20k sample)</text>
+  <text x="1360" y="730" font-family="Arial, sans-serif" font-size="14" fill="#333">• Fraud rate: 3.5% (700 fraud, 19,300 normal)</text>
+  <text x="1360" y="750" font-family="Arial, sans-serif" font-size="14" fill="#333">• Train/Val split: 16k / 4k (time-aware)</text>
+  <text x="1360" y="770" font-family="Arial, sans-serif" font-size="14" fill="#333">• Test set: 20k rows</text>
+  <text x="1360" y="790" font-family="Arial, sans-serif" font-size="14" fill="#333">• Feature engineering: AFTER split (leakage prevention)</text>
+  <text x="1360" y="810" font-family="Arial, sans-serif" font-size="14" fill="#333">• SMOTE: Disabled (using class weights: 10.48)</text>
+  
+  <!-- Summary Box -->
+  <rect x="80" y="840" width="1760" height="180" rx="5" fill="#FFF3E0" stroke="#FF9800" stroke-width="2"/>
+  <text x="960" y="870" font-family="Arial, sans-serif" font-size="20" font-weight="bold" text-anchor="middle" fill="#000">Summary &amp; Key Findings</text>
+  
+  <text x="100" y="900" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">✅ Achievements:</text>
+  <text x="120" y="920" font-family="Arial, sans-serif" font-size="13" fill="#00AA00">• Recall target achieved: 0.9058 ≥ 0.90</text>
+  <text x="120" y="940" font-family="Arial, sans-serif" font-size="13" fill="#00AA00">• Time-aware split prevents temporal leakage</text>
+  <text x="120" y="960" font-family="Arial, sans-serif" font-size="13" fill="#00AA00">• Feature engineering after split (leakage prevention)</text>
+  <text x="120" y="980" font-family="Arial, sans-serif" font-size="13" fill="#00AA00">• Comprehensive feature selection (516 → 120 features)</text>
+  <text x="120" y="1000" font-family="Arial, sans-serif" font-size="13" fill="#00AA00">• Ensemble model with 5 diverse models</text>
+  
+  <text x="500" y="900" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">⚠️ Issues:</text>
+  <text x="520" y="920" font-family="Arial, sans-serif" font-size="13" fill="#FF0000">• Precision below target: 0.0496 &lt; 0.40</text>
+  <text x="520" y="940" font-family="Arial, sans-serif" font-size="13" fill="#FF0000">• Poor prediction separation: 0.0088 &lt; 0.05</text>
+  <text x="520" y="960" font-family="Arial, sans-serif" font-size="13" fill="#FF0000">• Calibration failed (using uncalibrated model)</text>
+  <text x="520" y="980" font-family="Arial, sans-serif" font-size="13" fill="#FF0000">• 13 features show distribution shift (KS test)</text>
+  <text x="520" y="1000" font-family="Arial, sans-serif" font-size="13" fill="#FF0000">• High false positive rate: 59.92%</text>
+  
+  <text x="1000" y="900" font-family="Arial, sans-serif" font-size="14" font-weight="bold" fill="#000">📊 Performance:</text>
+  <text x="1020" y="920" font-family="Arial, sans-serif" font-size="13" fill="#333">• AUC-ROC: 0.7620 (Target: ≥0.94)</text>
+  <text x="1020" y="940" font-family="Arial, sans-serif" font-size="13" fill="#333">• Average Precision: 0.1326</text>
+  <text x="1020" y="960" font-family="Arial, sans-serif" font-size="13" fill="#00AA00">• Recall: 0.9058 ✅</text>
+  <text x="1020" y="980" font-family="Arial, sans-serif" font-size="13" fill="#FF0000">• Precision: 0.0496 ⚠️</text>
+  <text x="1020" y="1000" font-family="Arial, sans-serif" font-size="13" fill="#333">• F1-Score: 0.0940</text>
+  
+  <!-- Footer -->
+  <text x="960" y="1050" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#666666">
+    Part 2 of 2 - Complete Pipeline Overview
+  </text>
+</svg>
+

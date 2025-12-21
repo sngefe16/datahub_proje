@@ -1,0 +1,179 @@
+======================================================================
+FEATURE TYPES AND CATEGORIES
+======================================================================
+
+card1:
+  Type: int64
+  Classification: Categorical
+  Unique values: 2,057
+
+card2:
+  Type: float64
+  Classification: Categorical
+  Unique values: 418
+
+card3:
+  Type: float64
+  Classification: Categorical
+  Unique values: 26
+
+card4:
+  Type: object
+  Classification: Categorical
+  Unique values: 4
+
+card5:
+  Type: float64
+  Classification: Categorical
+  Unique values: 45
+
+card6:
+  Type: object
+  Classification: Categorical
+  Unique values: 2
+
+addr1:
+  Type: float64
+  Classification: Categorical
+  Unique values: 60
+
+addr2:
+  Type: float64
+  Classification: Categorical (Boolean)
+  Unique values: 2
+
+P_emaildomain:
+  Type: object
+  Classification: Categorical
+  Unique values: 50
+
+R_emaildomain:
+  Type: object
+  Classification: Categorical
+  Unique values: 39
+
+dist1:
+  Type: float64
+  Classification: Categorical
+  Unique values: 467
+
+dist2:
+  Type: float64
+  Classification: Categorical
+  Unique values: 138
+
+C1:
+  Type: float64
+  Classification: Categorical
+  Unique values: 179
+
+C2:
+  Type: float64
+  Classification: Categorical
+  Unique values: 168
+
+C3:
+  Type: float64
+  Classification: Categorical
+  Unique values: 5
+
+C4:
+  Type: float64
+  Classification: Categorical
+  Unique values: 28
+
+C5:
+  Type: float64
+  Classification: Categorical
+  Unique values: 165
+
+C6:
+  Type: float64
+  Classification: Categorical
+  Unique values: 143
+
+C7:
+  Type: float64
+  Classification: Categorical
+  Unique values: 21
+
+C8:
+  Type: float64
+  Classification: Categorical
+  Unique values: 40
+
+C9:
+  Type: float64
+  Classification: Categorical
+  Unique values: 118
+
+C10:
+  Type: float64
+  Classification: Categorical
+  Unique values: 39
+
+C11:
+  Type: float64
+  Classification: Categorical
+  Unique values: 155
+
+C12:
+  Type: float64
+  Classification: Categorical
+  Unique values: 25
+
+C13:
+  Type: float64
+  Classification: Categorical
+  Unique values: 383
+
+C14:
+  Type: float64
+  Classification: Categorical
+  Unique values: 141
+
+DeviceType:
+  Type: object
+  Classification: Categorical
+  Unique values: 2
+
+DeviceInfo:
+  Type: object
+  Classification: Categorical
+  Unique values: 172
+
+id_28:
+  Type: object
+  Classification: Categorical
+  Unique values: 2
+
+id_29:
+  Type: object
+  Classification: Categorical
+  Unique values: 2
+
+id_30:
+  Type: object
+  Classification: Categorical
+  Unique values: 53
+
+id_31:
+  Type: object
+  Classification: Categorical
+  Unique values: 51
+
+TransactionAmt:
+  Type: float64
+  Classification: Categorical
+  Unique values: 1,390
+
+TransactionDT:
+  Type: int64
+  Classification: Numeric
+  Unique values: 9,660
+
+ProductCD:
+  Type: object
+  Classification: Categorical
+  Unique values: 5
+
